@@ -445,7 +445,7 @@ watch(
         <el-table-column :label="$t('消费金额')" width="140" align="right">
           <template #default="{ row }">
             <div class="amount-cell">
-              <span class="amount-val">{{ formatCredits(row.amount_base_units, row.payment_method) }}</span>
+              <span class="amount-val">{{ formatCredits(row.amount_base_units) }}</span>
             </div>
           </template>
         </el-table-column>
@@ -567,7 +567,7 @@ watch(
                   <span class="mono">{{ activeRecord.project_id }}</span>
                 </el-descriptions-item>
                 <el-descriptions-item :label="$t('意图金额')">
-                  <span class="bold-text">{{ formatCredits(activeRecord.amount_base_units, activeRecord.payment_method) }}</span>
+                  <span class="bold-text">{{ formatCredits(activeRecord.amount_base_units) }}</span>
                 </el-descriptions-item>
                 <el-descriptions-item :label="$t('创建时间')">
                   {{ formatDate(activeRecord.created_at) }}
@@ -620,7 +620,7 @@ watch(
                     <span class="mono">{{ activeRecord.settlement?.settlement_id || 'ledger:internal' }}</span>
                   </el-descriptions-item>
                   <el-descriptions-item :label="$t('审计流水号 / Nonce')" :span="2">
-                    <span class="mono hash-text">{{ activeRecord.settlement?.settlement_id || activeRecord.settlement?.nonce }}</span>
+                    <span class="mono hash-text">{{ activeRecord.settlement?.settlement_id || '-' }}</span>
                   </el-descriptions-item>
                 </template>
               </el-descriptions>

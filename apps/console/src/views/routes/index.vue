@@ -185,7 +185,6 @@ onMounted(() => {
 });
 
 // Form validation rules
-const evmAddressRegex = /^0x[a-fA-F0-9]{40}$/;
 const pathPatternRegex = /^\/[a-zA-Z0-9_\-/{}*]*$/;
 
 const routeRules: FormRules = {
@@ -225,23 +224,6 @@ const routeRules: FormRules = {
       validator: (_rule, value, callback) => {
         if (value === undefined || value === null || value < 0) {
           callback(new Error(t('价格不能为负数')));
-        } else {
-          callback();
-        }
-      },
-      trigger: 'blur'
-    }
-  ], value, callback) => {
-        const isCreatingWallet = createDialogVisible.value && createForm.allowed_payment_methods === 'wallet';
-        const isEditingWallet = editDialogVisible.value && editForm.allowed_payment_methods === 'wallet';
-        if (isCreatingWallet || isEditingWallet) {
-          callback();
-          return;
-        }
-        if (!value) {
-          callback(new Error(t('请输入实时收款地址')));
-        } else if (!evmAddressRegex.test(value)) {
-          callback(new Error(t('收款地址必须为标准的42位以太坊/EVM地址 (0x...)')));
         } else {
           callback();
         }
@@ -307,6 +289,7 @@ const createForm = reactive({
   is_public: true,
   category: 'AI & LLM',
   tags: ['x402', '算力点数 (Credits)'] as string[],
+  network_label: '',
   description_md: '',
   path_pattern: '',
   methods: ['POST'] as string[],
@@ -333,14 +316,12 @@ function openCreateDialog() {
   createForm.category = 'AI & LLM';
   createForm.tags = ['x402', '算力点数 (Credits)'];
   createForm.description_md = '';
-  createForm.network = 'cluster:domestic-v1';
   createForm.network_label = '';
   createForm.path_pattern = '';
   createForm.methods = ['POST'];
   createForm.upstream_url = '';
   createForm.price_credits = 0.05;
   createForm.asset = tenantStore.currentCurrency;
-  createForm.payee_address = '';
   createForm.allowed_payment_methods = 'wallet';
   createForm.rate_limit_rpm = 600;
   createForm.timeout_ms = 30000;
@@ -401,7 +382,7 @@ async function handleCreateRoute() {
       if (invalidFields) {
         if (invalidFields.project_id || invalidFields.path_pattern || invalidFields.upstream_url) {
           createActiveStep.value = 0;
-        } else if (invalidFields.allowed_payment_methods || invalidFields.price_credits || invalidFields.payee_address) {
+        } else if (invalidFields.allowed_payment_methods || invalidFields.price_credits) {
           createActiveStep.value = 3;
         }
       }
@@ -488,6 +469,7 @@ const editForm = reactive({
   is_public: false,
   category: 'AI & LLM',
   tags: [] as string[],
+  network_label: '',
   description_md: '',
   path_pattern: '',
   methods: ['POST'] as string[],
@@ -590,14 +572,12 @@ function openEditDialog(route: Route) {
   editForm.category = route.category || 'AI & LLM';
   editForm.tags = Array.isArray(route.tags) ? [...route.tags] : [];
   editForm.description_md = route.description_md || '';
-  editForm.network = route.network || 'cluster:domestic-v1';
-  editForm.network_label = route.network_label || '';
+  editForm.network_label = '';
   editForm.path_pattern = route.path_pattern;
   editForm.methods = Array.isArray(route.methods) && route.methods.length > 0 ? [...route.methods] : ['POST'];
   editForm.upstream_url = route.upstream_url;
   editForm.price_credits = route.price_base_units / 1000000;
   editForm.asset = route.asset || tenantStore.currentCurrency;
-  editForm.payee_address = route.payee_address;
   editForm.allowed_payment_methods = route.allowed_payment_methods;
   editForm.rate_limit_rpm = route.rate_limit_rpm || 600;
   editForm.timeout_ms = route.timeout_ms || 30000;
@@ -636,7 +616,7 @@ async function handleUpdateRoute() {
       if (invalidFields) {
         if (invalidFields.project_id || invalidFields.path_pattern || invalidFields.upstream_url) {
           editActiveStep.value = 0;
-        } else if (invalidFields.allowed_payment_methods || invalidFields.price_credits || invalidFields.payee_address) {
+        } else if (invalidFields.allowed_payment_methods || invalidFields.price_credits) {
           editActiveStep.value = 3;
         }
       }
@@ -978,7 +958,7 @@ function copyToClipboard(text: string) {
         </el-table-column>
 
         <el-table-column :label="$t('支付方式')" width="160">
-          <template #default="{ row }">
+          <template #default>
             <el-tag type="primary" size="small">
               {{ $t('仅虚拟组织账户支付') }}
             </el-tag>
@@ -993,20 +973,10 @@ function copyToClipboard(text: string) {
           </template>
         </el-table-column>
 
-        <el-table-column :label="$t('收款账户/地址')" width="170" show-overflow-tooltip>
+        <el-table-column :label="$t('收款账户')" width="170" show-overflow-tooltip>
           <template #default="{ row }">
             <div v-if="row.allowed_payment_methods === 'wallet'" class="wallet-cell">
               <el-tag size="small" type="primary">{{ $t('组织主虚拟组织账户') }}</el-tag>
-            </div>
-            <div v-else-if="row.payee_address" class="address-cell">
-              <span>{{ row.payee_address.slice(0, 6) }}...{{ row.payee_address.slice(-4) }}</span>
-              <el-button
-                link
-                icon="CopyDocument"
-                size="small"
-                @click="copyToClipboard(row.payee_address)"
-                :title="$t('复制收款地址')"
-              />
             </div>
             <span v-else class="text-muted">-</span>
           </template>
@@ -1423,7 +1393,6 @@ function copyToClipboard(text: string) {
 
           <!-- 虚拟账户组织账户展示 (在仅虚拟支付时展示) -->
           <el-form-item
-            v-else
             :label="$t('虚拟账户组织账户')"
           >
             <el-input
@@ -1833,12 +1802,9 @@ function copyToClipboard(text: string) {
               {{ `${$t('内部虚拟组织账户结算单价，以租户本位币')} ${tenantStore.currentCurrency} ${$t('计价 (6 位精度)')}` }}
             </div>
           </el-form-item>
-            <div class="form-hint">{{ $t('用于实时清算直接打款的 EVM 0x 格式收款账户') }}</div>
-          </el-form-item>
 
           <!-- 虚拟账户组织账户展示 -->
           <el-form-item
-            v-else
             :label="$t('虚拟账户组织账户')"
           >
             <el-input

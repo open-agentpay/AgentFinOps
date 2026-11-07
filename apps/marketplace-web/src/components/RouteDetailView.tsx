@@ -191,7 +191,7 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
                 Credits / req
               </span>
             </div>
-            <div className="mt-1 text-[11px] text-slate-500">{netLabel}</div>
+            <div className="mt-1 text-[11px] text-slate-500">{clusterLabel}</div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">

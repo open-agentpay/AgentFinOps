@@ -943,7 +943,6 @@ export const enPhrases: Record<string, string> = {
   "业务意图状态 (PaymentIntent)": "Business Intent State (PaymentIntent)",
   "买方零扣费保障": "Zero-cost Buyer Protection Guarantee",
   "审计流水号 / Nonce": "Transaction Hash / Nonce",
-  "企业虚拟组织账户": "Enterprise Virtual Wallet",
   "全部 Agent": "All Agents",
   "全部方式": "All Payment Modes",
   "关联冻结 ID (Hold ID)": "Associated Hold ID",

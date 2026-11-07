@@ -6,6 +6,7 @@ import {
   PUBLIC_SITE_URL,
   buildAnswerFirstTldr,
   formatCreditsPrice,
+  formatClusterLabel,
   getMarketplaceRouteBySlug,
   getMarketplaceRoutes,
 } from '@/lib/marketplace';
@@ -120,8 +121,8 @@ export default async function RouteDetailPage(context: {
       },
       {
         '@type': 'PropertyValue',
-        name: 'SettlementNetwork',
-        value: `${route.network} (${netLabel})`,
+        name: 'SettlementCluster',
+        value: route.cluster ? `${route.cluster} (${formatClusterLabel(route.cluster)})` : 'Default Cluster',
       },
       {
         '@type': 'PropertyValue',
