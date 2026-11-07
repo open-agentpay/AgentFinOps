@@ -193,7 +193,7 @@ function switchRole(role: UserRole) {
       </el-menu>
 
       <div class="aside-footer">
-        <div class="version-label">AgentPay v0.1.0-poc</div>
+        <div class="version-label">AgentFinOps v0.3.0</div>
         <div class="sub-label">HTTP 402 Financial Firewall</div>
       </div>
     </el-aside>
