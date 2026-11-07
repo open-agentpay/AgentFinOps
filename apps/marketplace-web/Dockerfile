@@ -9,8 +9,12 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Cache package dependencies
-COPY package.json ./
-RUN npm install
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+ENV NPM_CONFIG_REGISTRY=$NPM_REGISTRY
+
+COPY package.json package-lock.json* ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
 
 # Stage 2: Build Next.js application
 FROM node:20-alpine AS builder

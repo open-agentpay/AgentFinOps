@@ -1,5 +1,5 @@
 # ==============================================================================
-# AgentPay Console Frontend Dockerfile (Vue 3 + Vite + Element Plus)
+# AgentFinOps Console Frontend Dockerfile (Vue 3 + Vite + Element Plus)
 # Multi-stage build with Nginx for static file hosting and reverse proxying
 # ==============================================================================
 
@@ -9,8 +9,12 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Cache package dependencies
-COPY package.json ./
-RUN npm install
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+ENV NPM_CONFIG_REGISTRY=$NPM_REGISTRY
+
+COPY package.json package-lock.json* ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
 
 # Copy source code and build production bundle
 COPY . .
