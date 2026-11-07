@@ -2,7 +2,7 @@ module github.com/agentfinops/agentfinops-gateway
 
 go 1.21
 
-require github.com/open-agentpay/agent-core-sdk/gateway v0.1.0
+require github.com/open-agentpay/agent-core-sdk/gateway v0.3.0
 
 replace github.com/open-agentpay/agent-core-sdk/gateway => ../../../agent-core-sdk/gateway
 
