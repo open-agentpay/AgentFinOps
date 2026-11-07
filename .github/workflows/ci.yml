@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AGENTPAY_JWT_SECRET: "ci-test-jwt-secret-key-at-least-32-characters-long"
+  AGENTPAY_UPSTREAM_MASTER_KEY: "0123456789abcdef0123456789abcdef"
+
+jobs:
+  python-lint-and-test:
+    name: Python ${{ matrix.python-version }} Check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: services/gateway/go.sum
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest
+          pip install -e "./sdk/python[dev,all]"
+
+      - name: Build Go Gateway
+        run: |
+          make gateway-build
+
+      - name: Run Ruff Linter
+        run: |
+          ruff check sdk/python/
+
+      - name: Run Pytest Suite
+        run: |
+          pytest sdk/python/tests -v
+
+      - name: Validate Conformance Vectors
+        run: |
+          python scripts/validate_vectors.py specs/conformance/test-vectors
+
+  gateway-go-test:
+    name: Go Gateway Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: services/gateway/go.sum
+
+      - name: Run Go Gateway Tests
+        run: |
+          make gateway-test
+
+  typescript-and-frontend-test:
+    name: TypeScript SDK & Console Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install and Test TypeScript SDK
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter "./sdk/typescript/packages/*" test
+
+      - name: Test Console
+        working-directory: apps/console
+        run: |
+          pnpm test

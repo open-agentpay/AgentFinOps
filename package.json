@@ -1,0 +1,34 @@
+{
+  "name": "agentfinops-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise AI Agent Gateway The Open-Source Payment Infrastructure & Financial Firewall for Autonomous AI Agents FinOps Financial Governance Platform",
+  "license": "Apache-2.0",
+  "scripts": {
+    "docs:sync": "node scripts/sync-specs.mjs",
+    "docs:dev": "npm run docs:sync && vitepress dev docs",
+    "docs:build": "npm run docs:sync && DOCS_BASE=/docs/ vitepress build docs && rm -rf apps/marketplace-web/public/docs && cp -r docs/.vitepress/dist apps/marketplace-web/public/docs && vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "console:dev": "pnpm --prefix apps/console run dev",
+    "console:build": "pnpm --prefix apps/console run build",
+    "console:test": "pnpm --prefix apps/console run test",
+    "marketplace:dev": "pnpm --prefix apps/marketplace-web run dev",
+    "marketplace:build": "pnpm --prefix apps/marketplace-web run build",
+    "marketplace:start": "pnpm --prefix apps/marketplace-web run start",
+    "marketplace:lint": "pnpm --prefix apps/marketplace-web run lint",
+    "build": "pnpm --recursive run build",
+    "test": "pnpm --recursive run test",
+    "lint": "pnpm --recursive run lint",
+    "clean": "pnpm --recursive run clean"
+  },
+  "devDependencies": {
+    "mermaid": "^11.17.2",
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

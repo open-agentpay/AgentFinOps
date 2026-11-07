@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/console" },
+    { "path": "./apps/marketplace-web" },
+    { "path": "./sdk/typescript/packages/agentpay" }
+  ]
+}
