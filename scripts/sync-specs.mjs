@@ -13,6 +13,11 @@ import { fileURLToPath } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SRC_EN = path.join(ROOT, 'specs')
 const SRC_ZH = path.join(ROOT, 'specs', 'zh')
+
+if (!existsSync(SRC_EN)) {
+  console.log('未检测到 specs/ 规范源文件目录，无需执行规范同步。')
+  process.exit(0)
+}
 const TARGETS = [
   {
     srcDir: SRC_EN,

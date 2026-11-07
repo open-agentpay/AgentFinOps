@@ -116,8 +116,14 @@ echo ">>> Building Marketplace Web image: ${MARKETPLACE_IMAGE} ..."
 # Ensure docs are built and bundled into apps/marketplace-web/public/docs
 if [[ ! -d "${ROOT_DIR}/apps/marketplace-web/public/docs" || ! -f "${ROOT_DIR}/apps/marketplace-web/public/docs/index.html" ]]; then
   echo ">>> Pre-bundling documentation into apps/marketplace-web/public/docs ..."
-  node "${ROOT_DIR}/scripts/sync-specs.mjs"
-  DOCS_BASE=/docs/ npx --yes vitepress build "${ROOT_DIR}/docs"
+  if [[ -f "${ROOT_DIR}/scripts/sync-specs.mjs" && -d "${ROOT_DIR}/specs" ]]; then
+    node "${ROOT_DIR}/scripts/sync-specs.mjs"
+  fi
+  if [[ -x "${ROOT_DIR}/node_modules/.bin/vitepress" ]]; then
+    DOCS_BASE=/docs/ "${ROOT_DIR}/node_modules/.bin/vitepress" build "${ROOT_DIR}/docs"
+  else
+    DOCS_BASE=/docs/ npx --yes vitepress build "${ROOT_DIR}/docs"
+  fi
   rm -rf "${ROOT_DIR}/apps/marketplace-web/public/docs"
   cp -r "${ROOT_DIR}/docs/.vitepress/dist" "${ROOT_DIR}/apps/marketplace-web/public/docs"
 fi
