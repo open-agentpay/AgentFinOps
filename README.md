@@ -153,14 +153,13 @@ print("推理结果:", response.json())
 
 ---
 
-## 🤝 开发者社区与商业交流
+## 🤝 开发者社区与交流
 
-如果您在企业内部落地 AI Agent、多智能体协同、Token 计费分摊或资金安全防护方面有任何问题与见解，欢迎加入我们的技术交流群：
+如果您在企业内部落地 AI Agent、多智能体协同、Token 计费分摊或资金安全防护方面有任何问题与见解，欢迎通过以下渠道交流：
 
 - **官方文档**：[https://aipmedia.cn/docs/](https://aipmedia.cn/docs/)
-- **微信技术交流群**：关注微信公众号「**AgentPay 开源**」或添加技术助手微信 `AgentPay-Dev` 备注「**智能体防火墙**」拉入技术群。
-- **企业与商业咨询**：`contact@aipmedia.cn`
-- **提交 Issue / PR**：欢迎提交 Pull Request，共同定义企业级 AI 行为审计与资金防火墙标准！
+- **问题反馈与建议**：欢迎提交 [GitHub Issues](https://github.com/open-agentpay/AgentFinOps/issues) 或 Pull Request 参与共建。
+- **技术讨论区**：欢迎在 [GitHub Discussions](https://github.com/open-agentpay/AgentFinOps/discussions) 发起提问与方案讨论。
 
 ---
 
