@@ -158,6 +158,9 @@ print("推理结果:", response.json())
 如果您在企业内部落地 AI Agent、多智能体协同、Token 计费分摊或资金安全防护方面有任何问题与见解，欢迎通过以下渠道交流：
 
 - **官方文档**：[https://aipmedia.cn/docs/](https://aipmedia.cn/docs/)
+- **微信公众号**：关注微信公众号「**杰哥AI运营**」
+- **社群助理微信**：添加助理微信 `jie125846` 备注「**智能体防火墙**」拉入技术交流群
+- **技术交流邮箱**：[julywhj@163.com](mailto:julywhj@163.com)
 - **问题反馈与建议**：欢迎提交 [GitHub Issues](https://github.com/open-agentpay/AgentFinOps/issues) 或 Pull Request 参与共建。
 - **技术讨论区**：欢迎在 [GitHub Discussions](https://github.com/open-agentpay/AgentFinOps/discussions) 发起提问与方案讨论。
 

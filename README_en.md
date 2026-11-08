@@ -50,6 +50,16 @@ docker compose -f docker-compose.caddy.yml up -d
 
 ---
 
+## 🤝 Community & Contact
+
+- **Documentation**: [https://aipmedia.cn/docs/](https://aipmedia.cn/docs/)
+- **WeChat Official Account**: 杰哥AI运营
+- **Community Assistant (WeChat)**: `jie125846`
+- **Technical Inquiries & Email**: [julywhj@163.com](mailto:julywhj@163.com)
+- **Issues & Discussions**: Welcome to submit [GitHub Issues](https://github.com/open-agentpay/AgentFinOps/issues) or join [Discussions](https://github.com/open-agentpay/AgentFinOps/discussions).
+
+---
+
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE) for details.
