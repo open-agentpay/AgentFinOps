@@ -1,0 +1,38 @@
+# AgentFinOps / AgentPay
+
+> 企业级 AI 行为审计与资金防火墙网关 (AI Agent Gateway & FinOps)
+> 官方文档中心：https://aipmedia.cn/docs/
+> 完整知识库快照：https://aipmedia.cn/docs/llms-full.txt
+
+AgentFinOps (基于 AgentPay 核心) 是专为生产级 AI Agent 与大语言模型应用打造的金融级防护网关。它架设在“AI 智能与推理”与“外部资金与数据资源”之间，解决智能体陷入死循环刷爆商业 API、财务预算一团烂账、合规审计无法定责等核心痛点。
+
+## 核心概念与技术要点
+- **零信任金融防火墙**：AI 模型只能提议交易，密码学签名与资金划转发生于确定性策略边界之后。
+- **人在回路 (HITL)**：大额调用自动触发 HTTP 402 异步挂起，向飞书/企业微信/钉钉推送交互式审批卡片，移动端一键放行。
+- **树状组织多层配额**：租户 -> 部门 -> 项目 -> Agent 四级预算切分与级联硬顶。
+- **防悬挂三态状态机**：Hold（事前冻结）-> Capture（事后确认扣费）-> Release（未消耗原子返还）。
+- **国内合规法币账本**：外部人民币分位乘 10,000 转为 6 位微单位整数存储，严禁浮点数，防“二清”合规路线。
+- **不可篡改行为黑匣子**：Append-Only 全链路审计流，支持溯源重现与等保 2.0 合规。
+- **AI 运维双子星**：与开源 Langfuse 深度共生，Langfuse 管大脑（Prompt/Token），AgentPay 管双手（金钱拦截与物理熔断）。
+- **MCP 协议原生支持**：为 Anthropic MCP Server 提供标价中间件，为 MCP Client 提供端侧金融防火墙。
+
+## 核心文档索引 (Core Documentation)
+- [Master 核心路线图 v2.0.0](https://aipmedia.cn/docs/roadmap/): 涵盖企业安全、FinOps 法币、微支付清算、生态全栈的官方演进蓝图。
+- [Master 落地实施计划](https://aipmedia.cn/docs/roadmap/execution-plan): P0 近期主线任务拆解与 Definition of Done。
+- [系统全景架构规范](https://aipmedia.cn/docs/architecture/): 零信任金融防火墙、防悬挂三态状态机与企业级网关拓扑。
+- [企业安全与威胁模型](https://aipmedia.cn/docs/architecture/security-model): N1 至 N6 威胁模型与对应防护策略。
+- [树状预算控制体系](https://aipmedia.cn/docs/finops/budget-control): 四级配额级联约束公式、RPM 滑动窗口熔断。
+- [虚拟钱包与账本规范](https://aipmedia.cn/docs/finops/wallet-ledger): 只追加账本、6 位微单位精度、防二清设计。
+- [合规法币充值与防二清](https://aipmedia.cn/docs/finops/fiat-topup): 微信/支付宝/对公汇款异步 Webhook 与双层幂等入账。
+- [协同审批与 402 异步挂起](https://aipmedia.cn/docs/security-hitl/hitl-approval): 飞书/企微卡片回调、三级风控梯度与客户端自动解挂。
+- [Agent 身份与行为审计黑匣子](https://aipmedia.cn/docs/security-hitl/agent-audit): 时间线流模型、上下文透传与纠纷定责。
+- [防悬挂三态状态机](https://aipmedia.cn/docs/protocol/state-machine): PaymentIntent、Settlement、Fulfillment 正交解耦生命周期。
+- [跨语言协议一致性与错误码](https://aipmedia.cn/docs/protocol/consistency): 统一错误码表与多语言测试向量对齐。
+- [MCP 协议原生支付中间件](https://aipmedia.cn/docs/ecosystem/mcp-plugin): Server 标价插件与 Client 拦截防火墙规范。
+- [与 Langfuse 深度共生规范](https://aipmedia.cn/docs/ecosystem/langfuse): Trace ID 透传机制与联合排查面板。
+- [客户端 SDK 接入指南](https://aipmedia.cn/docs/guide/sdk_quickstart): Python 与 TypeScript agentpay-core-sdk 极速接入代码。
+- [快速安装与部署指南](https://aipmedia.cn/docs/deployment/quickstart): Docker Compose 编排与服务端口拓扑。
+
+## 代码仓库
+- AgentFinOps (企业管理控制台与运营平台): https://github.com/open-agentpay/AgentFinOps
+- agent-core-sdk (核心网关运行时与 SDK 矩阵): https://github.com/open-agentpay/agent-core-sdk

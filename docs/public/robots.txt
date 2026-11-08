@@ -1,0 +1,35 @@
+# Robots.txt for AgentFinOps Documentation Center
+# Friendly to search engines and AI web crawlers / LLM agents
+
+User-agent: *
+Allow: /
+Allow: /docs/
+Allow: /docs/llms.txt
+Allow: /docs/llms-full.txt
+
+# Specific major AI Crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://aipmedia.cn/docs/sitemap.xml

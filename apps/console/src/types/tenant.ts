@@ -21,9 +21,21 @@ export interface Tenant {
   created_at?: string | number;
 }
 
+export interface Department {
+  department_id: string;
+  tenant_id: string;
+  parent_id?: string | null;
+  name: string;
+  budget_cap_monthly_base_units: number;
+  status: 'active' | 'archived';
+  created_at?: string | number;
+  updated_at?: string | number;
+}
+
 export interface Project {
   project_id: string;
   tenant_id: string;
+  department_id?: string | null;
   name: string;
   budget_cap_base_units: number;
   status: 'active' | 'archived';

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
+import { OfficeBuilding } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { useTenantStore } from '@/stores/tenant';
 import type { Project } from '@/types/tenant';
@@ -13,10 +14,18 @@ const tenantStore = useTenantStore();
 const loading = ref(false);
 const canManage = computed(() => authStore.hasRole(['owner', 'admin']));
 
+const departmentMap = computed(() => {
+  const map: Record<string, string> = {};
+  tenantStore.availableDepartments.forEach((d) => {
+    map[d.department_id] = d.name;
+  });
+  return map;
+});
+
 async function refreshProjects() {
   loading.value = true;
   try {
-    await tenantStore.loadProjects();
+    await Promise.all([tenantStore.loadProjects(), tenantStore.loadDepartments()]);
   } catch (err: unknown) {
     const msg = err instanceof Error ? t(err.message) : t('加载项目列表失败');
     ElMessage.error(msg);
@@ -37,6 +46,7 @@ const createLoading = ref(false);
 const createFormRef = ref<FormInstance>();
 const createForm = reactive({
   name: '',
+  department_id: '' as string | null,
   budget_cap_credits: 1000
 });
 
@@ -62,6 +72,7 @@ const projectRules: FormRules = {
 
 function openCreateDialog() {
   createForm.name = '';
+  createForm.department_id = null;
   createForm.budget_cap_credits = 1000;
   createDialogVisible.value = true;
 }
@@ -72,10 +83,11 @@ async function handleCreateProject() {
     if (!valid) return;
     createLoading.value = true;
     try {
-      const budgetCap公有云节点Units = Math.round(createForm.budget_cap_credits * 1000000);
+      const budgetCapBaseUnits = Math.round(createForm.budget_cap_credits * 1000000);
       await tenantStore.createProject({
         name: createForm.name.trim(),
-        budget_cap_base_units: budgetCap公有云节点Units
+        department_id: createForm.department_id || null,
+        budget_cap_base_units: budgetCapBaseUnits
       });
       ElMessage.success(t('项目创建成功'));
       createDialogVisible.value = false;
@@ -98,6 +110,7 @@ const editFormRef = ref<FormInstance>();
 const editingProjectId = ref('');
 const editForm = reactive({
   name: '',
+  department_id: '' as string | null,
   budget_cap_credits: 1000,
   status: 'active' as 'active' | 'archived'
 });
@@ -105,6 +118,7 @@ const editForm = reactive({
 function openEditDialog(prj: Project) {
   editingProjectId.value = prj.project_id;
   editForm.name = prj.name;
+  editForm.department_id = prj.department_id || null;
   editForm.budget_cap_credits = (prj.budget_cap_base_units || 0) / 1000000;
   editForm.status = prj.status || 'active';
   editDialogVisible.value = true;
@@ -116,10 +130,11 @@ async function handleUpdateProject() {
     if (!valid) return;
     editLoading.value = true;
     try {
-      const budgetCap公有云节点Units = Math.round(editForm.budget_cap_credits * 1000000);
+      const budgetCapBaseUnits = Math.round(editForm.budget_cap_credits * 1000000);
       await tenantStore.updateProject(editingProjectId.value, {
         name: editForm.name.trim(),
-        budget_cap_base_units: budgetCap公有云节点Units,
+        department_id: editForm.department_id || null,
+        budget_cap_base_units: budgetCapBaseUnits,
         status: editForm.status
       });
       ElMessage.success(t('项目更新成功'));
@@ -234,6 +249,16 @@ function handleSetCurrentProject(projectId: string) {
           </template>
         </el-table-column>
 
+        <el-table-column :label="$t('归属部门')" width="160">
+          <template #default="{ row }">
+            <el-tag v-if="row.department_id && departmentMap[row.department_id]" size="small" type="primary" effect="plain">
+              <el-icon class="mr-1"><OfficeBuilding /></el-icon>
+              {{ departmentMap[row.department_id] }}
+            </el-tag>
+            <span v-else class="text-xs text-text-muted">{{ $t('未归属') }}</span>
+          </template>
+        </el-table-column>
+
         <el-table-column :label="$t('预算上限')" width="160">
           <template #default="{ row }">
             <span class="budget-text">
@@ -315,6 +340,22 @@ function handleSetCurrentProject(projectId: string) {
           />
         </el-form-item>
 
+        <el-form-item :label="$t('所属部门')" prop="department_id">
+          <el-select
+            v-model="createForm.department_id"
+            placeholder="请选择归属部门（可选）"
+            clearable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="dept in tenantStore.availableDepartments"
+              :key="dept.department_id"
+              :label="dept.name"
+              :value="dept.department_id"
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item :label="$t('预算上限')" prop="budget_cap_credits">
           <el-input-number
             v-model="createForm.budget_cap_credits"
@@ -354,6 +395,22 @@ function handleSetCurrentProject(projectId: string) {
       >
         <el-form-item :label="$t('项目名称')" prop="name">
           <el-input v-model="editForm.name" clearable />
+        </el-form-item>
+
+        <el-form-item :label="$t('所属部门')" prop="department_id">
+          <el-select
+            v-model="editForm.department_id"
+            placeholder="请选择归属部门（可选）"
+            clearable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="dept in tenantStore.availableDepartments"
+              :key="dept.department_id"
+              :label="dept.name"
+              :value="dept.department_id"
+            />
+          </el-select>
         </el-form-item>
 
         <el-form-item :label="$t('预算上限')" prop="budget_cap_credits">

@@ -31,9 +31,27 @@ CREATE TABLE IF NOT EXISTS ap_tenant (
 CREATE TRIGGER trg_tenant_updated_at BEFORE UPDATE ON ap_tenant
     FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
 
+CREATE TABLE IF NOT EXISTS ap_department (
+    department_id VARCHAR(64) PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE CASCADE,
+    parent_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE CASCADE,
+    name VARCHAR(128) NOT NULL,
+    budget_cap_monthly_base_units BIGINT NOT NULL DEFAULT 0 CHECK (budget_cap_monthly_base_units >= 0),
+    status VARCHAR(32) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_tenant_department_name UNIQUE (tenant_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_department_tenant ON ap_department(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_department_parent ON ap_department(parent_id);
+CREATE TRIGGER trg_department_updated_at BEFORE UPDATE ON ap_department
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+
 CREATE TABLE IF NOT EXISTS ap_project (
     project_id VARCHAR(64) PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE CASCADE,
+    department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL,
     name VARCHAR(128) NOT NULL,
     budget_cap_base_units BIGINT NOT NULL DEFAULT 0 CHECK (budget_cap_base_units >= 0),
     status VARCHAR(32) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
@@ -43,6 +61,7 @@ CREATE TABLE IF NOT EXISTS ap_project (
 );
 
 CREATE INDEX IF NOT EXISTS idx_project_tenant ON ap_project(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_project_department ON ap_project(department_id);
 CREATE TRIGGER trg_project_updated_at BEFORE UPDATE ON ap_project
     FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
 
@@ -269,6 +288,7 @@ CREATE INDEX IF NOT EXISTS idx_topup_ext_ref ON ap_topup_order(external_ref) WHE
 CREATE TABLE IF NOT EXISTS ap_payment_intent (
     intent_id VARCHAR(64) PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE CASCADE,
+    department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL,
     project_id VARCHAR(64) NOT NULL REFERENCES ap_project(project_id) ON DELETE CASCADE,
     agent_id VARCHAR(64) NULL REFERENCES ap_agent(agent_id) ON DELETE SET NULL,
     route_id VARCHAR(64) NOT NULL REFERENCES ap_route(route_id),
@@ -287,6 +307,7 @@ CREATE TABLE IF NOT EXISTS ap_payment_intent (
 );
 
 CREATE INDEX IF NOT EXISTS idx_intent_tenant_created ON ap_payment_intent(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_intent_department ON ap_payment_intent(department_id);
 CREATE INDEX IF NOT EXISTS idx_intent_active_status ON ap_payment_intent(status) 
     WHERE status NOT IN ('completed', 'failed', 'rejected', 'expired');
 CREATE TRIGGER trg_intent_updated_at BEFORE UPDATE ON ap_payment_intent
@@ -319,6 +340,36 @@ CREATE TABLE IF NOT EXISTS ap_wallet_challenge (
 );
 
 CREATE INDEX IF NOT EXISTS idx_wallet_challenge_expiry ON ap_wallet_challenge(status, valid_before);
+
+-- Human-in-the-Loop (HITL) approval request lifecycle
+CREATE TABLE IF NOT EXISTS ap_approval_request (
+    approval_id VARCHAR(64) PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE CASCADE,
+    department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL,
+    project_id VARCHAR(64) NOT NULL REFERENCES ap_project(project_id) ON DELETE CASCADE,
+    agent_id VARCHAR(64) NOT NULL REFERENCES ap_agent(agent_id) ON DELETE CASCADE,
+    intent_id VARCHAR(64) NULL REFERENCES ap_payment_intent(intent_id) ON DELETE SET NULL,
+    amount_base_units BIGINT NOT NULL CHECK (amount_base_units > 0),
+    asset VARCHAR(16) NOT NULL DEFAULT 'CNY',
+    status VARCHAR(32) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'expired', 'consumed')),
+    trigger_reason VARCHAR(64) NOT NULL DEFAULT 'threshold_exceeded',
+    channel VARCHAR(32) NULL, -- 'feishu', 'wecom', 'dingtalk', 'console'
+    card_msg_id VARCHAR(128) NULL,
+    decided_by VARCHAR(64) NULL,
+    decided_at TIMESTAMPTZ NULL,
+    rejection_reason TEXT NULL,
+    nonce VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_approval_nonce UNIQUE (tenant_id, nonce)
+);
+
+CREATE INDEX IF NOT EXISTS idx_approval_status ON ap_approval_request(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_approval_agent ON ap_approval_request(agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_approval_department ON ap_approval_request(department_id);
+CREATE TRIGGER trg_approval_updated_at BEFORE UPDATE ON ap_approval_request
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
 
 CREATE TABLE IF NOT EXISTS ap_settlement_record (
     settlement_id VARCHAR(128) PRIMARY KEY,
@@ -384,6 +435,7 @@ CREATE INDEX IF NOT EXISTS idx_request_intent ON ap_request_record(intent_id) WH
 CREATE TABLE IF NOT EXISTS ap_usage_event (
     event_id VARCHAR(64) PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE CASCADE,
+    department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL,
     project_id VARCHAR(64) NOT NULL REFERENCES ap_project(project_id) ON DELETE CASCADE,
     agent_id VARCHAR(64) NULL REFERENCES ap_agent(agent_id) ON DELETE SET NULL,
     route_id VARCHAR(64) NOT NULL REFERENCES ap_route(route_id) ON DELETE CASCADE,
@@ -396,6 +448,7 @@ CREATE TABLE IF NOT EXISTS ap_usage_event (
 );
 
 CREATE INDEX IF NOT EXISTS idx_usage_tenant_hourly ON ap_usage_event(tenant_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_usage_department ON ap_usage_event(department_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_usage_agent ON ap_usage_event(agent_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_usage_intent ON ap_usage_event(intent_id);
 
@@ -414,13 +467,14 @@ CREATE TABLE IF NOT EXISTS ap_audit_event (
 
 CREATE INDEX IF NOT EXISTS idx_audit_tenant_time ON ap_audit_event(tenant_id, created_at DESC);
 
--- Agent Behavior Timeline & Audit Event Stream (T1.8 & T5.8)
+-- Agent Behavior Timeline & Audit Event Stream
 CREATE TABLE IF NOT EXISTS ap_agent_audit_event (
     event_id VARCHAR(64) PRIMARY KEY,
     event_type VARCHAR(64) NOT NULL,
     version VARCHAR(16) NOT NULL DEFAULT '1.0',
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE CASCADE,
+    department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL,
     project_id VARCHAR(64) NOT NULL REFERENCES ap_project(project_id) ON DELETE CASCADE,
     agent_id VARCHAR(64) NOT NULL REFERENCES ap_agent(agent_id) ON DELETE CASCADE,
     request_id VARCHAR(64) NOT NULL,
@@ -442,6 +496,7 @@ CREATE TABLE IF NOT EXISTS ap_agent_audit_event (
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_audit_agent_time ON ap_agent_audit_event(agent_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_audit_department ON ap_agent_audit_event(department_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_audit_tenant_time ON ap_agent_audit_event(tenant_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_audit_session ON ap_agent_audit_event(session_id) WHERE session_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_agent_audit_request ON ap_agent_audit_event(request_id);

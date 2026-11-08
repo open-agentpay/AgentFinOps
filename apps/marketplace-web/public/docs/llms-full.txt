@@ -1,0 +1,203 @@
+# AgentFinOps / AgentPay Complete Knowledge Base & Technical Blueprint
+# This document is a comprehensive context compiled for AI Agents, LLMs, and Crawlers.
+# Official Website: https://aipmedia.cn/docs/
+# Specification Baseline: v2.0.0
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+1. Platform Overview & Dual-Track Strategy
+2. Master Roadmap v2.0.0 Summary
+3. Architecture & Core Topology
+4. Security & Threat Model (N1-N6)
+5. Multi-Tier Tree Quota Model & FinOps Governance
+6. Payment State Machine (Hold / Capture / Release)
+7. Internal Virtual Ledger & Anti-Two-Clearing Compliance
+8. HITL Approval & 402 Asynchronous Suspend Mechanism
+9. MCP (Model Context Protocol) Native Payment Middleware
+10. Langfuse Co-existence & Distributed Tracing
+11. Client SDK Quickstart (Python & TypeScript)
+12. Unified Protocol Errors & Conformance Table
+
+================================================================================
+1. PLATFORM OVERVIEW & DUAL-TRACK STRATEGY
+================================================================================
+AgentFinOps (powered by the core agent-core-sdk / AgentPay engine) is an enterprise-grade AI agent gateway, financial firewall, and FinOps governance platform.
+
+Enterprise Positioning:
+- Enterprise FinOps Track: AI Agent Gateway & FinOps Financial Firewall
+  * Targets government/enterprise clients, SaaS developers, production AI agents.
+  * Solves runaway loops, unmanageable departmental costs, lack of audit trails.
+  * Payment channel: RMB virtual ledger (6-decimal micro-units), corporate bank transfer, WeChat Pay, Alipay, fully compliant without financial license requirements.
+
+Fundamental Moat:
+Underlying settlement rails are swappable infrastructure. AgentPay's core moat is the Financial Firewall, Non-Hanging State Machine (Hold/Capture/Release), and Immutable Audit Blackbox positioned between AI reasoning and external resources.
+
+================================================================================
+2. MASTER ROADMAP V2.0.0 SUMMARY
+================================================================================
+Priority Matrix:
+- P0 (Near-term Master Line):
+  1. Enterprise HITL Approval (Feishu / WeCom / DingTalk interactive cards)
+  2. Legal Currency Prepaid & Anti-Two-Clearing Closed-Loop (6-decimal micro-units)
+  3. Multi-tier Tree Quota Governance (Tenant -> Department -> Project -> Agent)
+  4. MCP Native Payment Middleware (Server pricing + Client firewall)
+  5. Langfuse Co-existence Trace Linkage Panel
+- P1 (Important Evolution):
+  1. Streaming Micro-Metering & Batch Settlement Buffer (millisecond token settlement)
+  2. Java / Spring Boot Starter SDK (@AgentPayGuard)
+  3. Node.js / Express / Fastify / NestJS Seller Middleware
+- P2 (Architectural Hardening):
+  1. Cloud KMS (AWS / Aliyun / Tencent) & Hardware HSM Signature Support
+  2. Out-of-Process Sidecar Daemon (N6 threat mitigation via IPC/UDS)
+  3. Distributed Gateway Cluster & Five-Way Reconciliation Scheduler
+- P3 (Long-term Ecosystem):
+  1. Enterprise On-Premise Suite (Docker Compose / Helm packaging)
+  2. Industry Standard Proposal for Enterprise AI Behavior Auditing & Firewall.
+
+================================================================================
+3. ARCHITECTURE & CORE TOPOLOGY
+================================================================================
+Principles:
+1. Zero-Trust on AI: AI proposes transactions; cryptographic signatures and payment commits execute strictly behind deterministic firewall policies.
+2. Decoupled Lifecycles: PaymentIntent (business intent), Settlement (fund transfer), and Fulfillment (upstream resource delivery) are strictly orthogonal.
+3. Multi-Tier Tree Hierarchy:
+   Tenant (Org) -> Department (BU) -> Project -> Agent
+   Cascade Invariant formula:
+     Agent.spent_24h + delta <= Agent.daily_budget_cap
+     AND Project.spent_month + delta <= Project.monthly_budget_cap
+     AND Department.spent_month + delta <= Department.monthly_budget_cap
+     AND Tenant.available_balance >= delta
+
+================================================================================
+4. SECURITY & THREAT MODEL (N1-N6)
+================================================================================
+Threat Vectors & Defenses:
+- N1: Buyer / Gateway Key Compromise
+  Defense: Cloud KMS / HSM Hardware security, zero plaintext keys in memory.
+- N2: Replay of Expired / Consumed Authorizations
+  Defense: Nonce tracking, valid_before / valid_after timestamps, idempotency tables.
+- N3: Runaway Loop and Uncontrolled Spending Attack
+  Defense: Local and gateway-level sliding window RPM circuit breaker, switches to OPEN in O(1) time.
+- N4: Upstream API Timeout with Fund Hanging
+  Defense: Non-hanging 3-state state machine: Hold -> Capture -> Release. On timeout, automatic Release restores balance atomically.
+- N5: Runaway Agent Recursive Loop
+  Defense: Local circuit breaker RPM sliding window. Switches to OPEN in O(1) time.
+- N6: In-Process Memory Hijacking / Host Penetration
+  Defense: Out-of-process Sidecar daemon running as low-privilege OS user via IPC.
+
+================================================================================
+5. PAYMENT STATE MACHINE (HOLD / CAPTURE / RELEASE)
+================================================================================
+Lifecycle States:
+1. HOLD: Atomically reserve estimated quota (available_cache -= delta, held_cache += delta).
+2. UPSTREAM CALL: Forward prompt/tool call to upstream model or paid API.
+3. CAPTURE: On success with actual cost, deduct held quota permanently and record append-only ledger entry.
+4. RELEASE: Atomically return remaining quota (delta - actual_cost) back to available_cache.
+5. EXPIRY / ERROR: If upstream fails, status transitions to 'released', 100% of delta is unlocked.
+
+================================================================================
+6. INTERNAL VIRTUAL LEDGER & LEGAL CURRENCY PRECISION
+================================================================================
+- Currency Base Unit: 6 decimal places (1 CNY = 1,000,000 base units).
+- Conversion rule from WeChat / Alipay (Cent / Minor unit):
+    amount_base_units = payment_minor_amount * 10,000
+- Floating-point prohibition: All ledger, arithmetic, and database columns MUST use 64-bit integer (BIGINT).
+- Anti-Two-Clearing Compliance:
+  Phase 1: Computing power / API prepaid voucher model (Zero license risk).
+  Phase 2: Licensed institution split-clearing (WeChat Merchant / Alipay Direct Pay).
+
+================================================================================
+7. HITL APPROVAL & 402 ASYNCHRONOUS SUSPEND
+================================================================================
+Three-tier risk gradient:
+1. Small (amount <= hitl_threshold): Millisecond automatic pass.
+2. Medium (hitl_threshold < amount <= max_tx_cap): Gateway returns HTTP 402 with approval_id. Asynchronously pushes rich card to Feishu / WeCom / DingTalk.
+3. Excessive (amount > max_tx_cap): Gateway blocks request immediately (SINGLE_TX_CAP_EXCEEDED).
+Client SDK Behavior:
+- Catches 402 with approval_id, pauses execution gracefully, polls status or awaits webhook.
+- Upon mobile approval, SDK replays request with 'X-AgentPay-Approval-Id: <id>' and receives 200 OK.
+
+================================================================================
+8. MCP (MODEL CONTEXT PROTOCOL) INTEGRATION
+================================================================================
+MCP Server:
+- Injects 'metadata.agentpay.price_base_units' into tools/list response.
+MCP Client:
+- Wraps callTool with local AgentPay Firewall.
+- Pre-checks transaction budget, daily quota, and rate limits locally before dispatching tool calls.
+
+================================================================================
+9. LANGFUSE CO-EXISTENCE
+================================================================================
+- Langfuse manages Prompt, Token tracing, and LLM evaluation (The Brain).
+- AgentPay manages Financial firewall, tool interception, and money settlement (The Hands).
+- Pass-through: SDK injects 'X-Langfuse-Trace-Id' and 'X-Langfuse-Span-Id' into HTTP headers.
+- Gateway stores trace_id in ap_request_record.
+- AgentFinOps Console provides 1-click jump to Langfuse trace details.
+
+================================================================================
+10. CLIENT SDK QUICKSTART
+================================================================================
+Python:
+```python
+from agentpay_core import AgentPayClient, PolicyConfig, SQLitePolicyEngine
+
+policy = SQLitePolicyEngine.create_in_memory(
+    PolicyConfig(
+        id="finance_agent",
+        max_per_tx_base_units=5000000,          # 5.00 CNY
+        rolling_budget_24h_base_units=50000000, # 50.00 CNY
+        whitelist_domains={"gate.aipmedia.cn"},
+    )
+)
+
+client = AgentPayClient(
+    api_key="apk_live_xxx",
+    gateway_url="https://gate.aipmedia.cn",
+    policy=policy,
+)
+
+response = client.post("/api/v1/chat/completions", json={"model": "deepseek-chat", ...})
+print(response.json())
+```
+
+TypeScript:
+```typescript
+import { AgentPayClient, PolicyConfig, SQLitePolicyEngine } from "agentpay-core-sdk";
+
+const policy = SQLitePolicyEngine.createInMemory(
+  new PolicyConfig({
+    id: "finance_agent",
+    maxPerTxBaseUnits: 5000000n,
+    rollingBudget24hBaseUnits: 50000000n,
+    whitelistDomains: ["gate.aipmedia.cn"],
+  })
+);
+
+const client = new AgentPayClient({
+  apiKey: process.env.AGENT_API_KEY!,
+  gatewayUrl: "https://gate.aipmedia.cn",
+  policy,
+});
+
+const response = await client.post("/api/v1/chat/completions", {
+  body: JSON.stringify({ model: "deepseek-chat", ... }),
+});
+console.log(await response.json());
+```
+
+================================================================================
+11. PROTOCOL ERROR CODES REFERENCE
+================================================================================
+- INSUFFICIENT_FUNDS: Available balance below required amount.
+- SINGLE_TX_CAP_EXCEEDED: Requested amount exceeds single transaction cap.
+- ROLLING_BUDGET_EXCEEDED: 24h rolling budget cap exceeded.
+- QUOTA_EXCEEDED_DEPARTMENT: Department monthly quota limit reached.
+- QUOTA_EXCEEDED_PROJECT: Project monthly quota limit reached.
+- CIRCUIT_BREAKER_TRIGGERED: RPM limit exceeded; circuit open to prevent runaway loop.
+- APPROVAL_REQUIRED: HTTP 402 with approval_id pending human approval.
+- APPROVAL_REJECTED: Approver rejected the transaction.
+- APPROVAL_EXPIRED: Approval request timed out.
+- NONCE_ALREADY_USED: Cryptographic replay prevention triggered.
+- DOMAIN_NOT_WHITELISTED: Target upstream domain not permitted by policy.

@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -10,6 +11,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "github.com/lib/pq"
+
+	"github.com/agentfinops/agentfinops-gateway/internal/enterprise/department"
+	"github.com/agentfinops/agentfinops-gateway/internal/enterprise/quota"
+	"github.com/open-agentpay/agent-core-sdk/gateway/agent"
 	"github.com/open-agentpay/agent-core-sdk/gateway/config"
 	"github.com/open-agentpay/agent-core-sdk/gateway/logger"
 	"github.com/open-agentpay/agent-core-sdk/gateway/metrics"
@@ -86,9 +92,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 4. Initialize metrics and HTTP server from agent-core-sdk
+	// 4. Initialize enterprise services (Department & Cascade Quota Enforcer & Spend Recorder)
+	var deptSvc department.Service = department.NewMemoryService()
+	var projStore quota.ProjectStore = quota.NewMemoryProjectStore()
+	if cfg.Database.PostgresURL != "" {
+		if db, dbErr := sql.Open("postgres", cfg.Database.PostgresURL); dbErr == nil {
+			if pingErr := db.Ping(); pingErr == nil {
+				deptSvc = department.NewPostgresService(db)
+				projStore = quota.NewPostgresProjectStore(db)
+				log.Info("connected to PostgreSQL for enterprise department & quota persistence")
+			} else {
+				log.Warn("failed to ping PostgreSQL, falling back to in-memory store", slog.Any("error", pingErr))
+			}
+		}
+	}
+
+	budgetTracker := quota.NewMemoryBudgetTracker()
+	agentEnforcer := agent.NewEnforcer()
+	cascadeEnforcer := quota.NewCascadeQuotaEnforcer(agentEnforcer, projStore, deptSvc, budgetTracker)
+	cascadeRecorder := quota.NewCascadeSpendRecorder(projStore, deptSvc, budgetTracker)
+	deptHandler := department.NewHTTPHandler(deptSvc)
+
+	// 5. Initialize metrics and HTTP server from agent-core-sdk
 	m := metrics.New()
-	srv, err := server.New(cfg, rcuMgr, m)
+	srv, err := server.New(cfg, rcuMgr, m,
+		server.WithPolicyEvaluator(cascadeEnforcer),
+		server.WithSpendRecorder(cascadeRecorder),
+		server.WithTenantSubresource("departments", deptHandler),
+	)
 	if err != nil {
 		log.Error("failed to create gateway server", slog.Any("error", err))
 		os.Exit(1)

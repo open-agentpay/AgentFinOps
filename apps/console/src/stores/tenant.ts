@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { SUPPORTED_CURRENCIES, type Tenant, type Project, type CurrencyCode } from '@/types/tenant';
-import { tenantApi, projectApi, type CreateProjectPayload, type UpdateProjectPayload } from '@/api/client';
+import { SUPPORTED_CURRENCIES, type Tenant, type Project, type Department, type CurrencyCode } from '@/types/tenant';
+import { tenantApi, projectApi, departmentApi, type CreateProjectPayload, type UpdateProjectPayload, type CreateDepartmentPayload, type UpdateDepartmentPayload } from '@/api/client';
 import { MOCK_TENANTS, MOCK_PROJECTS } from '@/api/mockData';
 
 export const useTenantStore = defineStore('tenant', () => {
   const tenants = ref<Tenant[]>([...MOCK_TENANTS]);
+  const departments = ref<Department[]>([]);
   const projects = ref<Project[]>([...MOCK_PROJECTS]);
 
   const savedTenantId = localStorage.getItem('agentpay_tenant_id') || MOCK_TENANTS[0].tenant_id;
@@ -13,6 +14,10 @@ export const useTenantStore = defineStore('tenant', () => {
 
   const availableProjects = computed(() => {
     return projects.value.filter((p) => p.tenant_id === currentTenantId.value);
+  });
+
+  const availableDepartments = computed(() => {
+    return departments.value.filter((d) => d.tenant_id === currentTenantId.value);
   });
 
   const savedProjectId = localStorage.getItem('agentpay_project_id');
@@ -74,6 +79,19 @@ export const useTenantStore = defineStore('tenant', () => {
     }
   }
 
+  async function loadDepartments() {
+    if (!currentTenantId.value) return;
+    try {
+      const data = await departmentApi.getDepartments(currentTenantId.value);
+      if (Array.isArray(data)) {
+        const otherDepts = departments.value.filter((d) => d.tenant_id !== currentTenantId.value);
+        departments.value = [...otherDepts, ...data];
+      }
+    } catch {
+      // fallback
+    }
+  }
+
   async function loadProjects() {
     if (!currentTenantId.value) return;
     try {
@@ -108,7 +126,7 @@ export const useTenantStore = defineStore('tenant', () => {
       localStorage.removeItem('agentpay_project_id');
     }
 
-    await loadProjects();
+    await Promise.all([loadProjects(), loadDepartments()]);
   }
 
   function upsertTenant(tenant: Tenant) {
@@ -164,8 +182,38 @@ export const useTenantStore = defineStore('tenant', () => {
     }
   }
 
+  async function createDepartment(payload: CreateDepartmentPayload): Promise<Department> {
+    if (!currentTenantId.value) throw new Error('未选择当前租户');
+    const dept = await departmentApi.createDepartment(currentTenantId.value, payload);
+    departments.value.push(dept);
+    return dept;
+  }
+
+  async function updateDepartment(deptId: string, payload: UpdateDepartmentPayload): Promise<Department> {
+    if (!currentTenantId.value) throw new Error('未选择当前租户');
+    const updated = await departmentApi.updateDepartment(currentTenantId.value, deptId, payload);
+    const idx = departments.value.findIndex((d) => d.department_id === deptId);
+    if (idx !== -1) {
+      departments.value[idx] = updated;
+    }
+    return updated;
+  }
+
+  async function deleteDepartment(deptId: string): Promise<void> {
+    if (!currentTenantId.value) throw new Error('未选择当前租户');
+    await departmentApi.deleteDepartment(currentTenantId.value, deptId);
+    departments.value = departments.value.filter((d) => d.department_id !== deptId);
+    // Unlink in loaded projects
+    projects.value.forEach((p) => {
+      if (p.department_id === deptId) {
+        p.department_id = null;
+      }
+    });
+  }
+
   return {
     tenants,
+    departments,
     projects,
     currentTenantId,
     currentProjectId,
@@ -173,10 +221,12 @@ export const useTenantStore = defineStore('tenant', () => {
     currentProject,
     currentCurrency,
     currencySymbol,
+    availableDepartments,
     availableProjects,
     formatAmount,
     formatCurrency,
     loadTenants,
+    loadDepartments,
     loadProjects,
     switchTenant,
     upsertTenant,
@@ -184,6 +234,9 @@ export const useTenantStore = defineStore('tenant', () => {
     switchProject,
     createProject,
     updateProject,
-    deleteProject
+    deleteProject,
+    createDepartment,
+    updateDepartment,
+    deleteDepartment
   };
 });

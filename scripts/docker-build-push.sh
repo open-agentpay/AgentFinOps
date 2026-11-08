@@ -82,6 +82,8 @@ COMMIT="$(git -C "${ROOT_DIR}" rev-parse --short HEAD 2>/dev/null || echo "unkno
 # 1. Build Gateway Go image
 echo ""
 echo ">>> Building Go Gateway image: ${GATEWAY_IMAGE} ..."
+echo ">>> Syncing gateway vendor dependencies..."
+(cd "${ROOT_DIR}/services/gateway" && go mod vendor)
 if [[ -n "${PLATFORM}" ]]; then
   BUILD_CMD=(docker buildx build --platform "${PLATFORM}" --provenance=false)
   if [[ "${PUSH}" == "true" ]]; then

@@ -1,11 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AgentPay Console - Autonomous AI Financial Firewall</title>
+
+    <!-- SEO Primary Metadata -->
+    <title>AgentFinOps 控制台 — 企业级 AI Agent 行为审计与资金防火墙</title>
+    <meta name="description" content="AgentFinOps 企业级 AI Agent 行为审计与资金防火墙管理控制台。支持四级树状组织配额、人在回路 (HITL) 审批流转、防死循环熔断与全链路审计。" />
+    <meta name="keywords" content="AgentFinOps, AgentPay, AI FinOps, 资金防火墙, 行为审计, 飞书审批, 企微审批, 预算熔断, 组织成本中心, x402" />
+    <meta name="author" content="AgentFinOps Team" />
+
+    <!-- OpenGraph / Social Sharing (WeChat, 知乎, 钉钉, Twitter) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AgentFinOps 控制台" />
+    <meta property="og:title" content="AgentFinOps 控制台 — 企业级 AI Agent 行为审计与资金防火墙" />
+    <meta property="og:description" content="架设在 AI 推理与外部资金之间的安全防火墙：防止 Agent 跑飞刷爆预算、企业财务清晰分摊、人在回路移动端一键放行。" />
+    <meta property="og:image" content="https://aipmedia.cn/logo.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+
+    <!-- WeChat In-App Browser Card Preview Metadata -->
+    <meta itemprop="name" content="AgentFinOps 控制台 — 企业级 AI Agent 资金防火墙" />
+    <meta itemprop="image" content="https://aipmedia.cn/logo.png" />
+    <meta itemprop="description" content="防止智能体死循环刷爆商业 API，实现企业多层级预算配额熔断与协同办公一键放行。" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AgentFinOps 控制台 — 企业级 AI Agent 资金防火墙" />
+    <meta name="twitter:description" content="架设在 AI 推理与外部资金之间的金融级安全网关。" />
+    <meta name="twitter:image" content="https://aipmedia.cn/logo.png" />
+
+    <!-- Channel Attribution & UTM Tracking -->
+    <script>
+      (function() {
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'channel', 'ref'];
+          var attribution = {};
+          var hasUtm = false;
+          for (var i = 0; i < keys.length; i++) {
+            var val = params.get(keys[i]);
+            if (val) {
+              attribution[keys[i]] = val;
+              hasUtm = true;
+            }
+          }
+          if (document.referrer && !attribution.referrer) {
+            attribution.referrer = document.referrer;
+            hasUtm = true;
+          }
+          if (hasUtm) {
+            attribution.captured_at = new Date().toISOString();
+            localStorage.setItem('agentpay_attribution', JSON.stringify(attribution));
+            sessionStorage.setItem('agentpay_attribution_session', JSON.stringify(attribution));
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

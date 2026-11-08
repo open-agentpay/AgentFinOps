@@ -44,6 +44,7 @@ export default {
   },
   menu: {
     dashboard: '控制台概览',
+    departments: '部门与成本中心',
     members: '组织团队与成员',
     routes: '路由与上游',
     versions: '发布与回滚',

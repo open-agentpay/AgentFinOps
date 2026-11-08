@@ -11,13 +11,19 @@ WORKDIR /build
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates tzdata
 
-# Cache go modules
+# Cache go modules or use vendor
 ENV GONOSUMDB=github.com/open-agentpay/*
-COPY go.mod go.sum ./
-RUN go mod download
 
-# Copy source code
+# Copy entire source code (including vendor if present)
 COPY . .
+
+# If vendor directory exists, use vendored dependencies; otherwise download modules (stripping local replace if needed)
+RUN if [ -d "vendor" ]; then \
+        echo "Using vendored dependencies..."; \
+    else \
+        sed -i '/replace github.com\/open-agentpay\/agent-core-sdk\/gateway =>/d' go.mod && \
+        go mod download; \
+    fi
 
 # Build static executable
 ARG VERSION=0.3.0

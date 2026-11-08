@@ -278,13 +278,76 @@ export const tenantApi = {
   }
 };
 
+export interface CreateDepartmentPayload {
+  name: string;
+  parent_id?: string | null;
+  budget_cap_monthly_base_units?: number;
+  department_id?: string;
+}
+
+export interface UpdateDepartmentPayload {
+  name?: string;
+  parent_id?: string | null;
+  budget_cap_monthly_base_units?: number;
+  status?: 'active' | 'archived';
+}
+
+export const departmentApi = {
+  async getDepartments(tenantId: string): Promise<import('@/types/tenant').Department[]> {
+    if (!tenantId) return [];
+    try {
+      const response = await apiClient.get<{ departments: import('@/types/tenant').Department[] }>(`/tenants/${tenantId}/departments`);
+      return response.data.departments || [];
+    } catch {
+      return [];
+    }
+  },
+
+  async createDepartment(tenantId: string, payload: CreateDepartmentPayload): Promise<import('@/types/tenant').Department> {
+    try {
+      const response = await apiClient.post<{ department: import('@/types/tenant').Department }>(`/tenants/${tenantId}/departments`, payload);
+      return response.data.department;
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        throw new Error(err.response.data.error.message || '创建部门失败');
+      }
+      throw err;
+    }
+  },
+
+  async updateDepartment(tenantId: string, deptId: string, payload: UpdateDepartmentPayload): Promise<import('@/types/tenant').Department> {
+    try {
+      const response = await apiClient.patch<{ department: import('@/types/tenant').Department }>(`/tenants/${tenantId}/departments/${deptId}`, payload);
+      return response.data.department;
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        throw new Error(err.response.data.error.message || '更新部门失败');
+      }
+      throw err;
+    }
+  },
+
+  async deleteDepartment(tenantId: string, deptId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/tenants/${tenantId}/departments/${deptId}`);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        throw new Error(err.response.data.error.message || '删除部门失败');
+      }
+      throw err;
+    }
+  }
+};
+
 export interface CreateProjectPayload {
   name: string;
+  department_id?: string | null;
   budget_cap_base_units?: number;
 }
 
 export interface UpdateProjectPayload {
   name?: string;
+  department_id?: string | null;
   budget_cap_base_units?: number;
   status?: 'active' | 'archived';
 }

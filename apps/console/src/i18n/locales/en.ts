@@ -44,6 +44,7 @@ export default {
   },
   menu: {
     dashboard: 'Dashboard',
+    departments: 'Departments & Cost Centers',
     members: 'Team & Members',
     routes: 'Routes & Upstreams',
     versions: 'Publish & Rollback',

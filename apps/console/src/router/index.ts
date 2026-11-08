@@ -40,6 +40,18 @@ export const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: 'departments',
+        name: 'Departments',
+        component: () => import('@/views/departments/index.vue'),
+        meta: {
+          title: '部门与成本中心',
+          titleKey: 'menu.departments',
+          icon: 'OfficeBuilding',
+          requiresAuth: true,
+          roles: ['owner', 'admin', 'operator', 'viewer']
+        }
+      },
+      {
         path: 'projects',
         name: 'Projects',
         component: () => import('@/views/projects/index.vue'),

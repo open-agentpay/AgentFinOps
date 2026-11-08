@@ -49,6 +49,20 @@ export const metadata: Metadata = {
     url: PUBLIC_SITE_URL,
     siteName: 'AgentFinOps',
     type: 'website',
+    images: [
+      {
+        url: `${PUBLIC_SITE_URL}/logo.png`,
+        width: 512,
+        height: 512,
+        alt: 'AgentFinOps Logo',
+      },
+    ],
+  },
+  other: {
+    'itemprop:name': 'AgentFinOps — 面向 AI Agent 的预算防火墙与微支付网关',
+    'itemprop:image': `${PUBLIC_SITE_URL}/logo.png`,
+    'itemprop:description':
+      '免注册体验 HTTP 402 APIs，提供网关真实 SLA 探活、即时 SDK 调用示例与 /llms.txt 机器目录发现。',
   },
 };
 
@@ -80,6 +94,13 @@ export default async function RootLayout({
       className={initialTheme === 'dark' ? 'dark' : ''}
       suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=new URLSearchParams(window.location.search),k=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','channel','ref'],a={},h=false;for(var i=0;i<k.length;i++){var v=p.get(k[i]);if(v){a[k[i]]=v;h=true;}}if(document.referrer&&!a.referrer){a.referrer=document.referrer;h=true;}if(h){a.captured_at=new Date().toISOString();localStorage.setItem('agentpay_attribution',JSON.stringify(a));sessionStorage.setItem('agentpay_attribution_session',JSON.stringify(a));}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-screen flex flex-col">
         <ThemeProvider initialTheme={initialTheme}>
           <I18nProvider initialLocale={initialLocale}>

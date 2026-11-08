@@ -1,0 +1,36 @@
+# github.com/lib/pq v1.12.3
+## explicit; go 1.21
+github.com/lib/pq
+github.com/lib/pq/internal/pgpass
+github.com/lib/pq/internal/pgservice
+github.com/lib/pq/internal/pqsql
+github.com/lib/pq/internal/pqtime
+github.com/lib/pq/internal/pqutil
+github.com/lib/pq/internal/proto
+github.com/lib/pq/oid
+github.com/lib/pq/pqerror
+github.com/lib/pq/scram
+# github.com/open-agentpay/agent-core-sdk/gateway v0.3.0 => ../../../agent-core-sdk/gateway
+## explicit; go 1.21
+github.com/open-agentpay/agent-core-sdk/gateway/admin
+github.com/open-agentpay/agent-core-sdk/gateway/agent
+github.com/open-agentpay/agent-core-sdk/gateway/auth
+github.com/open-agentpay/agent-core-sdk/gateway/config
+github.com/open-agentpay/agent-core-sdk/gateway/idempotency
+github.com/open-agentpay/agent-core-sdk/gateway/logger
+github.com/open-agentpay/agent-core-sdk/gateway/metrics
+github.com/open-agentpay/agent-core-sdk/gateway/payment
+github.com/open-agentpay/agent-core-sdk/gateway/proxy
+github.com/open-agentpay/agent-core-sdk/gateway/rcu
+github.com/open-agentpay/agent-core-sdk/gateway/recovery
+github.com/open-agentpay/agent-core-sdk/gateway/server
+github.com/open-agentpay/agent-core-sdk/gateway/settlement
+github.com/open-agentpay/agent-core-sdk/gateway/timeline
+github.com/open-agentpay/agent-core-sdk/gateway/upstreamauth
+github.com/open-agentpay/agent-core-sdk/gateway/usage
+github.com/open-agentpay/agent-core-sdk/gateway/wallet
+github.com/open-agentpay/agent-core-sdk/gateway/x402
+# gopkg.in/yaml.v3 v3.0.1
+## explicit
+gopkg.in/yaml.v3
+# github.com/open-agentpay/agent-core-sdk/gateway => ../../../agent-core-sdk/gateway
