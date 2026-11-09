@@ -431,10 +431,34 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
                 </thead>
                 <tbody className="divide-y divide-slate-200 text-slate-800 dark:divide-slate-800/70 dark:text-slate-200">
                   <tr>
+                    <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{t.detail.routeIdParam}</td>
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                      <div className="flex items-center gap-2">
+                        <span>{route.route_id}</span>
+                        <CopyButton text={route.route_id} label="复制" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                      {t.detail.routeIdNote}
+                    </td>
+                  </tr>
+                  <tr>
                     <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{t.detail.slugParam}</td>
                     <td className="px-4 py-3 font-mono text-xs text-indigo-600 dark:text-indigo-300">{route.slug}</td>
                     <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
                       {t.detail.slugNote}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{t.detail.mcpParam}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-emerald-600 dark:text-emerald-300">
+                      <div className="flex items-center gap-2 truncate max-w-xs sm:max-w-md">
+                        <span className="truncate">{mcpSseUrl}</span>
+                        <CopyButton text={mcpSseUrl} label="复制" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                      {t.detail.mcpNote}
                     </td>
                   </tr>
                   <tr>

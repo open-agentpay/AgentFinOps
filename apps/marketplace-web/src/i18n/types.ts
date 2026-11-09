@@ -179,8 +179,12 @@ export interface Translations {
     paramCol: string;
     valueCol: string;
     notesCol: string;
+    routeIdParam: string;
+    routeIdNote: string;
     slugParam: string;
     slugNote: string;
+    mcpParam: string;
+    mcpNote: string;
     endpointParam: string;
     endpointNote: string;
     priceParam: string;
