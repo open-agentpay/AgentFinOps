@@ -32,9 +32,16 @@ export interface Translations {
     risksTitle: string;
     risksSubtitle: string;
     risksList: Array<{
+      id: string;
+      tag: string;
+      tagType?: 'danger' | 'warning' | 'purple' | 'blue' | 'emerald';
       title: string;
+      enTitle: string;
       problem: string;
+      problemHighlight?: string;
       solution: string;
+      keywords: string[];
+      isHero?: boolean;
     }>;
     dualRailBadge: string;
     dualRailTitle: string;

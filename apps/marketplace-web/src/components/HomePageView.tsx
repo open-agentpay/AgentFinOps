@@ -3,16 +3,24 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
+  AlertTriangle,
   ArrowRight,
+  CheckCircle2,
   Cpu,
   Database,
+  Flame,
+  GitMerge,
+  KeyRound,
   Layers,
   Lock,
+  Power,
+  RefreshCw,
   Server,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
   Terminal,
+  Users,
   Zap,
 } from 'lucide-react';
 import {
@@ -22,6 +30,32 @@ import {
 } from '@/lib/marketplace';
 import { useI18n } from '@/i18n/context';
 import { CopyButton } from '@/components/CopyButton';
+
+const RISK_ICONS = [
+  Flame,
+  ShieldAlert,
+  KeyRound,
+  RefreshCw,
+  GitMerge,
+  Users,
+  Power,
+];
+
+function getRiskTagBadgeStyle(tagType?: string) {
+  switch (tagType) {
+    case 'danger':
+      return 'border-rose-500/30 bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300';
+    case 'warning':
+      return 'border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
+    case 'purple':
+      return 'border-purple-500/30 bg-purple-50 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300';
+    case 'emerald':
+      return 'border-emerald-500/30 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
+    case 'blue':
+    default:
+      return 'border-indigo-500/30 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300';
+  }
+}
 
 export function HomePageView() {
   const { t } = useI18n();
@@ -334,25 +368,130 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {t.homePage.risksList.map((item, idx) => (
-            <div
-              key={idx}
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-400 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-indigo-500/40"
-            >
-              <div>
-                <h4 className="font-bold text-slate-900 dark:text-white">{item.title}</h4>
-                <div className="mt-2 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
-                  <span className="font-semibold">生产风险：</span>
-                  {item.problem}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {t.homePage.risksList.map((item, idx) => {
+            const IconComponent = RISK_ICONS[idx] || ShieldAlert;
+            const isFirst = item.id === '01';
+            const isLast = item.id === '07';
+
+            return (
+              <div
+                key={item.id}
+                className={`group relative flex flex-col justify-between rounded-3xl border p-6 sm:p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+                  isFirst
+                    ? 'lg:col-span-2 md:col-span-2 border-rose-300/80 bg-gradient-to-br from-rose-50/70 via-white to-indigo-50/40 shadow-sm dark:border-rose-500/30 dark:bg-gradient-to-br dark:from-rose-950/20 dark:via-slate-900/90 dark:to-indigo-950/20'
+                    : isLast
+                    ? 'lg:col-span-2 md:col-span-2 border-amber-300/80 bg-gradient-to-br from-amber-50/70 via-white to-rose-50/40 shadow-sm dark:border-amber-500/30 dark:bg-gradient-to-br dark:from-amber-950/20 dark:via-slate-900/90 dark:to-rose-950/20'
+                    : 'border-slate-200/90 bg-white/95 shadow-sm hover:border-indigo-400/80 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-indigo-500/50'
+                }`}
+              >
+                <div>
+                  {/* Top Bar: Index + Tag + Status / Functional Icon */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-mono text-xs font-black tracking-wider text-slate-400 dark:text-slate-500">
+                        {item.id}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getRiskTagBadgeStyle(
+                          item.tagType
+                        )}`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            item.tagType === 'danger'
+                              ? 'bg-rose-500 animate-pulse'
+                              : item.tagType === 'warning'
+                              ? 'bg-amber-500'
+                              : item.tagType === 'purple'
+                              ? 'bg-purple-500'
+                              : item.tagType === 'emerald'
+                              ? 'bg-emerald-500'
+                              : 'bg-indigo-500'
+                          }`}
+                        />
+                        {item.tag}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isFirst && (
+                        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
+                          RPM CIRCUIT BREAKER
+                        </span>
+                      )}
+                      {isLast && (
+                        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                          <Power className="h-3 w-3 animate-pulse" />
+                          GLOBAL KILL SWITCH
+                        </span>
+                      )}
+                      <div
+                        className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
+                          isFirst
+                            ? 'border-rose-200 bg-rose-100/80 text-rose-600 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                            : isLast
+                            ? 'border-amber-200 bg-amber-100/80 text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                            : 'border-slate-200 bg-slate-100/80 text-slate-700 group-hover:border-indigo-200 group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:border-indigo-800 dark:group-hover:bg-indigo-950/60 dark:group-hover:text-indigo-300'
+                        }`}
+                      >
+                        <IconComponent className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Title & EnTitle */}
+                  <div className="mt-4">
+                    <div className="flex flex-wrap items-baseline gap-2">
+                      <h3 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                        {item.title}
+                      </h3>
+                      <span className="font-mono text-xs text-slate-400 dark:text-slate-500">
+                        {item.enTitle}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Problem Callout */}
+                  <div className="mt-3.5 rounded-2xl border border-rose-200/80 bg-rose-50/60 p-3.5 text-xs text-slate-700 dark:border-rose-900/30 dark:bg-rose-950/20 dark:text-slate-300">
+                    <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>生产风险场景：</span>
+                    </div>
+                    <p className="mt-1.5 leading-relaxed font-medium">
+                      {item.problem}
+                    </p>
+                  </div>
+
+                  {/* Solution Box */}
+                  <div className="mt-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-3.5 text-xs text-slate-700 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-slate-300">
+                    <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                      <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                      <span>系统级免疫机制：</span>
+                    </div>
+                    <p className="mt-1.5 leading-relaxed font-medium">
+                      {item.solution}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Keywords Chips */}
+                <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {item.keywords.map((kw, kIdx) => (
+                      <span
+                        key={kIdx}
+                        className="inline-flex items-center rounded-md border border-slate-200/80 bg-slate-100/90 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-800 dark:bg-slate-800/90 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="mt-3 rounded-lg bg-emerald-50 p-2.5 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
-                <span className="font-semibold">防御机制：</span>
-                {item.solution}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
