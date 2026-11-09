@@ -98,7 +98,13 @@ func main() {
 	if cfg.Database.PostgresURL != "" {
 		if db, dbErr := sql.Open("postgres", cfg.Database.PostgresURL); dbErr == nil {
 			if pingErr := db.Ping(); pingErr == nil {
-				deptSvc = department.NewPostgresService(db)
+				pgDeptSvc := department.NewPostgresService(db)
+				if initErr := pgDeptSvc.InitSchema(context.Background()); initErr != nil {
+					log.Warn("failed to verify or migrate enterprise department schema", slog.Any("error", initErr))
+				} else {
+					log.Info("enterprise department & HITL schema verified/migrated successfully")
+				}
+				deptSvc = pgDeptSvc
 				projStore = quota.NewPostgresProjectStore(db)
 				log.Info("connected to PostgreSQL for enterprise department & quota persistence")
 			} else {

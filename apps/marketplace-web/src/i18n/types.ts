@@ -168,6 +168,12 @@ export interface Translations {
     codeSectionTitle: string;
     codeSectionSubtitle: string;
     copySdkCode: string;
+    mcpTabLabel: string;
+    mcpWorkBuddyLabel: string;
+    mcpClaudeCursorLabel: string;
+    mcpSdkLabel: string;
+    mcpProtectedBadge: string;
+    mcpCliCommandLabel: string;
     tableSpecsTitle: string;
     tableSpecsSubtitle: string;
     paramCol: string;

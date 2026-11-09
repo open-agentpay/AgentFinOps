@@ -22,6 +22,7 @@ import {
   PUBLIC_GATEWAY_URL,
   PUBLIC_SITE_URL,
   buildAnswerFirstTldr,
+  buildMcpConfigSnippet,
   buildPythonSdkSnippet,
   buildTypescriptSdkSnippet,
   formatClusterLabel,
@@ -87,16 +88,29 @@ interface RouteDetailViewProps {
 
 export function RouteDetailView({ route, relatedRoutes }: RouteDetailViewProps) {
   const { t, locale } = useI18n();
-  const [sdkLang, setSdkLang] = useState<'python' | 'typescript'>('python');
+  const [sdkLang, setSdkLang] = useState<'python' | 'typescript' | 'mcp'>('python');
+  const [mcpPlatform, setMcpPlatform] = useState<'workbuddy' | 'claude_cursor' | 'sdk'>('workbuddy');
 
   const priceStr = formatCreditsPrice(route.price_base_units);
   const clusterLabel = formatClusterLabel(route.cluster);
   const tldr = buildAnswerFirstTldr(route, locale);
   const pythonSnippet = buildPythonSdkSnippet(route, locale);
   const tsSnippet = buildTypescriptSdkSnippet(route, locale);
-  const activeSnippet = sdkLang === 'python' ? pythonSnippet : tsSnippet;
+  const mcpSnippet = buildMcpConfigSnippet(route, mcpPlatform);
+  const activeSnippet =
+    sdkLang === 'python' ? pythonSnippet : sdkLang === 'typescript' ? tsSnippet : mcpSnippet;
   const activeInstallCmd =
-    sdkLang === 'python' ? 'pip install agentpay-core-sdk' : 'npm install agentpay-core-sdk';
+    sdkLang === 'python'
+      ? 'pip install agentpay-core-sdk'
+      : sdkLang === 'typescript'
+      ? 'npm install agentpay-core-sdk'
+      : mcpPlatform === 'workbuddy'
+      ? 'cat ~/.workbuddy/mcp.json'
+      : mcpPlatform === 'claude_cursor'
+      ? 'cat ~/.config/claude/claude_desktop_config.json'
+      : 'npm install agentpay-core-sdk';
+  const mcpSseUrl = `${PUBLIC_GATEWAY_URL}/v1/mcp/sse?route_id=${route.route_id || route.slug}`;
+  const mcpCliCmd = `npx agentpay-cli mcp add --name ${route.slug || 'tool'} --url "${mcpSseUrl}" --key apk_live_xxx`;
   const fullEndpoint = `${PUBLIC_GATEWAY_URL}${route.path_pattern}`;
   const isHealthy = route.sla.health_status === 'healthy';
   const categoryLabel = t.filter.categories[route.category] || route.category;
@@ -286,10 +300,87 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
                   >
                     TypeScript
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setSdkLang('mcp')}
+                    className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
+                      sdkLang === 'mcp'
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {t.detail.mcpTabLabel}
+                  </button>
                 </div>
                 <CopyButton text={activeSnippet} label={t.detail.copySdkCode} />
               </div>
             </div>
+
+            {sdkLang === 'mcp' && (
+              <div className="mt-4 space-y-3">
+                {/* MCP Platform Sub-switch */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="text-slate-400">客户端环境:</span>
+                    <button
+                      type="button"
+                      onClick={() => setMcpPlatform('workbuddy')}
+                      className={`rounded-lg px-2.5 py-1 font-medium transition ${
+                        mcpPlatform === 'workbuddy'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      {t.detail.mcpWorkBuddyLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMcpPlatform('claude_cursor')}
+                      className={`rounded-lg px-2.5 py-1 font-medium transition ${
+                        mcpPlatform === 'claude_cursor'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      {t.detail.mcpClaudeCursorLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMcpPlatform('sdk')}
+                      className={`rounded-lg px-2.5 py-1 font-medium transition ${
+                        mcpPlatform === 'sdk'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                      }`}
+                    >
+                      {t.detail.mcpSdkLabel}
+                    </button>
+                  </div>
+                  <span className="text-xs font-mono text-emerald-400">
+                    SSE Endpoint: {mcpSseUrl}
+                  </span>
+                </div>
+
+                {/* Financial Guardrail Alert */}
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-3 text-xs text-emerald-300">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
+                    <span>
+                      {t.detail.mcpProtectedBadge.replace('{price}', priceStr)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick CLI command */}
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-slate-300 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 font-mono truncate">
+                    <span className="text-slate-500">$</span>
+                    <span className="truncate">{mcpCliCmd}</span>
+                  </div>
+                  <CopyButton text={mcpCliCmd} label="复制 CLI" />
+                </div>
+              </div>
+            )}
 
             <div className="mt-4">
               <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
@@ -298,7 +389,15 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
                   <CopyButton text={activeInstallCmd} />
                 </div>
                 <span className="font-mono text-indigo-300">
-                  {sdkLang === 'python' ? 'Python 3.10+' : 'Node.js 20+ / TypeScript'}
+                  {sdkLang === 'python'
+                    ? 'Python 3.10+'
+                    : sdkLang === 'typescript'
+                    ? 'Node.js 20+ / TypeScript'
+                    : mcpPlatform === 'workbuddy'
+                    ? '腾讯 WorkBuddy Desktop'
+                    : mcpPlatform === 'claude_cursor'
+                    ? 'Cursor / Claude Desktop'
+                    : 'agentpay-core-sdk 0.3.1+'}
                 </span>
               </div>
               <pre className="overflow-x-auto rounded-xl border border-slate-800 bg-[#050811] p-4 font-mono text-xs leading-relaxed text-slate-100 sm:text-sm">

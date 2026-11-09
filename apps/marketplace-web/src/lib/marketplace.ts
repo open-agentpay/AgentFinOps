@@ -179,6 +179,79 @@ console.log('Response:', await response.json());`;
 }
 
 /**
+ * Generates ready-to-use MCP (Model Context Protocol) configuration snippet for desktop clients & SDKs.
+ */
+export function buildMcpConfigSnippet(
+  route: MarketplaceRouteItem,
+  platform: 'workbuddy' | 'claude_cursor' | 'sdk' = 'workbuddy'
+): string {
+  const toolName = (route.slug || route.route_id || 'mcp_tool').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const sseUrl = `${PUBLIC_GATEWAY_URL}/v1/mcp/sse?route_id=${route.route_id || route.slug}`;
+  const priceStr = formatCreditsPrice(route.price_base_units);
+
+  if (platform === 'workbuddy') {
+    return `// 复制至 ~/.workbuddy/mcp.json (腾讯 WorkBuddy 官方配置)
+{
+  "mcpServers": {
+    "${toolName}": {
+      "url": "${sseUrl}",
+      "headers": {
+        "Authorization": "Bearer apk_live_your_api_key"
+      }
+    }
+  }
+}`;
+  }
+
+  if (platform === 'claude_cursor') {
+    return `// 复制至 claude_desktop_config.json 或 Cursor MCP 设置
+{
+  "mcpServers": {
+    "${toolName}": {
+      "url": "${sseUrl}",
+      "headers": {
+        "Authorization": "Bearer apk_live_your_api_key"
+      }
+    }
+  }
+}`;
+  }
+
+  // SDK Interceptor snippet
+  return `import { McpToolInterceptor, InMemoryToolQuotaGuard } from 'agentpay-core-sdk';
+
+// 1. 初始化本地/企业级财务配额守卫 (单笔上限 ¥50.00，日预算 ¥500.00)
+const guard = new InMemoryToolQuotaGuard({
+  maxPerTxBaseUnits: 50000000n,
+  dailyBudgetBaseUnits: 500000000n,
+});
+
+// 2. 挂载 MCP 客户端拦截器 (两阶段预扣与自动防悬挂)
+const interceptor = new McpToolInterceptor({
+  guard,
+  defaultMetadata: {
+    price_base_units: ${route.price_base_units || 50000},
+    price_cny: '${priceStr}',
+    single_tx_cap: 50000000,
+  },
+});
+
+// 3. 安全调用该 MCP 工具 (超额自动向大模型返回结构化引导，不引发崩溃)
+const result = await interceptor.interceptCall(
+  {
+    toolName: '${toolName}',
+    arguments: ${JSON.stringify(route.sample_params || { query: 'test' })},
+    agentId: 'bot_worker_1',
+    departmentId: 'dept_marketing',
+  },
+  async (args) => {
+    // 实际发起网络调用至网关 MCP SSE 端点
+    return { content: [{ type: 'text', text: '执行完成' }] };
+  }
+);`;
+}
+
+/**
  * Generates pure Markdown documentation for a single route (used by /llms.txt and AI Bot content negotiation).
  */
 export function buildRouteMarkdownDoc(route: MarketplaceRouteItem): string {
@@ -272,7 +345,15 @@ ${sdkCode}
 ${tsSdkCode}
 \`\`\`
 
-## 4. Detailed Documentation
+## 4. MCP (Model Context Protocol) 智能体直接接入配置
+
+支持直接接入 **腾讯 WorkBuddy**、**Claude Desktop**、**Cursor** 等支持标准 MCP 协议的智能体环境：
+
+\`\`\`json
+${buildMcpConfigSnippet(route, 'workbuddy')}
+\`\`\`
+
+## 5. Detailed Documentation
 
 ${route.description_md}
 `;

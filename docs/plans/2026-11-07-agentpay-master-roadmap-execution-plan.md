@@ -1,10 +1,7 @@
 # AgentPay 核心任务全景规划实施路线与落地执行计划 (Master Execution Plan)
 
-> **版本**：v2.0.0-EXECUTION  
-> **状态**：**官方主线研发实施纲领 (Approved Implementation Spec)**  
-> **核心定位**：**企业级 AI 行为审计与资金防火墙网关 (AI Agent Gateway & FinOps)**  
-> **基线规划**：对齐《AgentPay 核心任务全景规划与技术演进路线图 (Master Roadmap) v2.0.0》  
-> **代码仓库分工**：
+> **版本**：v2.0.0-EXECUTION**状态**：**官方主线研发实施纲领 (Approved Implementation Spec)\*\***核心定位**：**企业级 AI 行为审计与资金防火墙网关 (AI Agent Gateway & FinOps)\***\*基线规划**：对齐《AgentPay 核心任务全景规划与技术演进路线图 (Master Roadmap) v2.0.0》**代码仓库分工**：
+>
 > - `AgentFinOps`：企业管理平面、控制台 Web、FinOps 财务与配额中心、审批回调接收器、发票核销。
 > - `agent-core-sdk`：核心网关运行时引擎（Go）、多语言客户端 SDK（Python / TypeScript / Java）、MCP 支付插件、卖方中间件。
 
@@ -56,6 +53,7 @@
 ### 2.1 办公协同与人在回路（HITL）审批时序
 
 三级风控判定：
+
 1. **小额** ($\le$ `hitl_threshold`)：毫秒级放行；
 2. **中大额** (`hitl_threshold` < 金额 $\le$ `max_tx_cap`)：触发 402 异步挂起 + 飞书/企微/钉钉卡片推送；
 3. **超大额** (> `max_tx_cap`)：直接拒绝返回 `SINGLE_TX_CAP_EXCEEDED`。
@@ -74,10 +72,10 @@ sequenceDiagram
     Gateway->>Gateway: 生成 approval_id, 状态标记为 pending_approval
     Gateway->>FinOps: 异步投递审批事件 (approval_id, agent_id, amount, intent)
     Gateway-->>Agent: HTTP 402 Payment Required<br/>{"error": "APPROVAL_REQUIRED", "approval_id": "appr_xxx", "retry_after": 5}
-    
+
     FinOps->>Collab: 发送富文本审批卡片 (Agent名称、意图、预计消耗、所属部门)
     Collab-->>Approver: 弹出审批通知消息
-    
+
     loop 客户端退避轮询或异步挂起
         Agent->>Gateway: 重试/轮询 GET /v1/approvals/appr_xxx/status
         Gateway-->>Agent: {"status": "pending"}
@@ -105,22 +103,26 @@ graph TD
     Tenant["企业租户 (Tenant) <br/>总预算硬顶: 100,000 元"]
     Tenant --> DeptA["研发事业群 (Department A)<br/>配额: 60,000 元"]
     Tenant --> DeptB["运营事业群 (Department B)<br/>配额: 40,000 元"]
-    
+
     DeptA --> Proj1["代码智能体项目 (Project 1)<br/>配额: 40,000 元"]
     DeptA --> Proj2["CI/CD 自动化项目 (Project 2)<br/>配额: 20,000 元"]
-    
+
     Proj1 --> Agent1["Coding Copilot (Agent)<br/>单笔上限: 50 元 / 日预算: 500 元"]
     Proj1 --> Agent2["Code Reviewer (Agent)<br/>单笔上限: 20 元 / 日预算: 200 元"]
 ```
 
 **级联校验逻辑 (Cascade Quota Invariant)**：
 任何一笔扣款必须满足：
-$$\begin{cases}
+
+$$
+\begin{cases}
 \text{Agent.spent}_{24h} + \Delta \le \text{Agent.daily\_cap} \\
 \text{Project.spent}_{month} + \Delta \le \text{Project.monthly\_budget} \\
 \text{Department.spent}_{month} + \Delta \le \text{Department.monthly\_budget} \\
 \text{Tenant.available\_balance} \ge \Delta
-\end{cases}$$
+\end{cases}
+$$
+
 任何一层超限立即阻断并上报指标。
 
 ---
@@ -128,7 +130,11 @@ $$\begin{cases}
 ### 2.3 国内合规法币充值与精度换算 (6 位微单位无浮点数存储)
 
 外部充值渠道以人民币“分”（两位小数）交互，入账边界严格执行：
-$$\text{amount\_base\_units} = \text{payment\_minor\_amount} \times 10,000$$
+
+$$
+\text{amount\_base\_units} = \text{payment\_minor\_amount} \times 10,000
+$$
+
 全程严禁浮点数运算。
 
 ```mermaid
@@ -145,18 +151,18 @@ sequenceDiagram
     Backend->>PayChannel: 下单请求 (out_trade_no: topup_xxx, 金额: 100000 分)
     PayChannel-->>Console: 唤起企业支付二维码 / 聚合收银台
     Admin->>PayChannel: 完成扫码支付
-    
+
     PayChannel->>Backend: Webhook 异步支付结果通知 (transaction_id, status=SUCCESS)
     Backend->>Backend: 验签渠道签名 (RSA / 国密)
     Backend->>Backend: 双层幂等检查 (external_ref = transaction_id, topup_id)
     Backend->>Backend: 换算微单位: 100,000 分 * 10,000 = 1,000,000,000 微单位
-    
+
     Backend->>Ledger: BEGIN TRANSACTION
     Backend->>Ledger: INSERT INTO ap_ledger_entry (type='topup_credit', amount=1000000000)
     Backend->>Ledger: UPDATE ap_wallet SET available_cache = available_cache + 1000000000
     Backend->>Ledger: UPDATE ap_topup_order SET status='confirmed'
     Backend->>Ledger: COMMIT
-    
+
     Backend-->>PayChannel: 200 SUCCESS
 ```
 
@@ -308,9 +314,10 @@ sequenceDiagram
   - **文件**：`AgentFinOps/infra/postgres/schema.sql`
   - 在 `ap_topup_order` 建立组合唯一索引：
     ```sql
-    CREATE UNIQUE INDEX IF NOT EXISTS uq_topup_external_ref ON ap_topup_order(channel, external_ref) 
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_topup_external_ref ON ap_topup_order(channel, external_ref)
         WHERE external_ref IS NOT NULL;
     ```
+
 - [ ] **Task 1.3.2 (微信/支付宝企业充值处理服务)**
   - **文件**：`AgentFinOps/services/gateway/internal/billing/topup.go`
   - 严格执行微单位无浮点转换：`amount_base_units = payment_minor_amount * 10000`。
@@ -349,10 +356,10 @@ sequenceDiagram
 
 ## 5. 验收标准与交付产物清单 (Definition of Done)
 
-| 模块 | 关键验收指标 | 交付代码与测试产物 |
-| :--- | :--- | :--- |
-| **HITL 审批** | 1. 超过阈值请求自动挂起并返回 402，且包含有效 `approval_id`。<br/>2. 飞书/企微卡片 1 秒内收到推送。<br/>3. 点击放行后客户端自动恢复并成功调用。 | 单元与集成测试：`test_hitl_lifecycle`，覆盖挂起、拒绝、超时、通过 4 种状态分支。 |
-| **树状配额** | 1. 部门超限时精准阻断，不影响同租户其他部门。<br/>2. 满足父子配额级联一致性。 | 并发测试：`TestDepartmentCascadeBudget`（100 并发压测不发生配额击穿）。 |
-| **法币充值** | 1. 金额换算严格乘 10000 转换为 6 位微单位整数，严禁浮点运算。<br/>2. 重复 Webhook 触发严格幂等跳过，无二次充值。 | 测试套件：`TestTopUpIdempotencyAndPrecision`。 |
-| **MCP 支付** | 1. MCP Client 本地拦截率 100%。<br/>2. 超额 Tool Call 毫秒级直接在端侧拦截，不产生网络浪费。 | MCP 样例工具套件：`examples/mcp-paid-tools`。 |
-| **Langfuse 联动** | 1. 网关审计流水与 Langfuse 平台 Trace 100% 对应。<br/>2. 控制台一键直达对应 Langfuse Span。 | 联合演示端到端链路测试：`test_langfuse_agentpay_e2e`。 |
+| 模块              | 关键验收指标                                                                                                                                   | 交付代码与测试产物                                                               |
+| :---------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------- |
+| **HITL 审批**     | 1. 超过阈值请求自动挂起并返回 402，且包含有效`approval_id`。<br/>2. 飞书/企微卡片 1 秒内收到推送。<br/>3. 点击放行后客户端自动恢复并成功调用。 | 单元与集成测试：`test_hitl_lifecycle`，覆盖挂起、拒绝、超时、通过 4 种状态分支。 |
+| **树状配额**      | 1. 部门超限时精准阻断，不影响同租户其他部门。<br/>2. 满足父子配额级联一致性。                                                                  | 并发测试：`TestDepartmentCascadeBudget`（100 并发压测不发生配额击穿）。          |
+| **法币充值**      | 1. 金额换算严格乘 10000 转换为 6 位微单位整数，严禁浮点运算。<br/>2. 重复 Webhook 触发严格幂等跳过，无二次充值。                               | 测试套件：`TestTopUpIdempotencyAndPrecision`。                                   |
+| **MCP 支付**      | 1. MCP Client 本地拦截率 100%。<br/>2. 超额 Tool Call 毫秒级直接在端侧拦截，不产生网络浪费。                                                   | MCP 样例工具套件：`examples/mcp-paid-tools`。                                    |
+| **Langfuse 联动** | 1. 网关审计流水与 Langfuse 平台 Trace 100% 对应。<br/>2. 控制台一键直达对应 Langfuse Span。                                                    | 联合演示端到端链路测试：`test_langfuse_agentpay_e2e`。                           |

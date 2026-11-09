@@ -220,7 +220,145 @@ type PostgresService struct {
 }
 
 func NewPostgresService(db *sql.DB) *PostgresService {
-	return &PostgresService{db: db}
+	svc := &PostgresService{db: db}
+	_ = svc.InitSchema(context.Background())
+	return svc
+}
+
+// InitSchema ensures that ap_department, related foreign keys, indexes, triggers, and HITL tables exist.
+func (p *PostgresService) InitSchema(ctx context.Context) error {
+	ddl := `
+	CREATE OR REPLACE FUNCTION set_updated_at_timestamp()
+	RETURNS TRIGGER AS $$
+	BEGIN
+		NEW.updated_at = CURRENT_TIMESTAMP;
+		RETURN NEW;
+	END;
+	$$ LANGUAGE plpgsql;
+
+	CREATE TABLE IF NOT EXISTS ap_tenant (
+		tenant_id VARCHAR(64) PRIMARY KEY,
+		name VARCHAR(128) NOT NULL,
+		currency VARCHAR(16) NOT NULL DEFAULT 'CNY',
+		status VARCHAR(32) NOT NULL DEFAULT 'active',
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+
+	DO $$
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_updated_at') THEN
+			CREATE TRIGGER trg_tenant_updated_at BEFORE UPDATE ON ap_tenant
+				FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+		END IF;
+	END $$;
+
+	CREATE TABLE IF NOT EXISTS ap_department (
+		department_id VARCHAR(64) PRIMARY KEY,
+		tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE CASCADE,
+		parent_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE CASCADE,
+		name VARCHAR(128) NOT NULL,
+		budget_cap_monthly_base_units BIGINT NOT NULL DEFAULT 0 CHECK (budget_cap_monthly_base_units >= 0),
+		status VARCHAR(32) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		CONSTRAINT uq_tenant_department_name UNIQUE (tenant_id, name)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_department_tenant ON ap_department(tenant_id);
+	CREATE INDEX IF NOT EXISTS idx_department_parent ON ap_department(parent_id);
+
+	DO $$
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_department_updated_at') THEN
+			CREATE TRIGGER trg_department_updated_at BEFORE UPDATE ON ap_department
+				FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+		END IF;
+	END $$;
+
+	CREATE TABLE IF NOT EXISTS ap_project (
+		project_id VARCHAR(64) PRIMARY KEY,
+		tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE CASCADE,
+		department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL,
+		name VARCHAR(128) NOT NULL,
+		budget_cap_base_units BIGINT NOT NULL DEFAULT 0 CHECK (budget_cap_base_units >= 0),
+		status VARCHAR(32) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		CONSTRAINT uq_tenant_project_name UNIQUE (tenant_id, name)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_project_tenant ON ap_project(tenant_id);
+	CREATE INDEX IF NOT EXISTS idx_project_department ON ap_project(department_id);
+
+	DO $$
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_project_updated_at') THEN
+			CREATE TRIGGER trg_project_updated_at BEFORE UPDATE ON ap_project
+				FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+		END IF;
+	END $$;
+
+	DO $$
+	BEGIN
+		IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ap_project') THEN
+			ALTER TABLE ap_project ADD COLUMN IF NOT EXISTS department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_project_department ON ap_project(department_id);
+		END IF;
+
+		IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ap_payment_intent') THEN
+			ALTER TABLE ap_payment_intent ADD COLUMN IF NOT EXISTS department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_intent_department ON ap_payment_intent(department_id);
+		END IF;
+
+		IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ap_usage_event') THEN
+			ALTER TABLE ap_usage_event ADD COLUMN IF NOT EXISTS department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_usage_department ON ap_usage_event(department_id, created_at);
+		END IF;
+
+		IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ap_agent_audit_event') THEN
+			ALTER TABLE ap_agent_audit_event ADD COLUMN IF NOT EXISTS department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_agent_audit_department ON ap_agent_audit_event(department_id, occurred_at DESC);
+		END IF;
+	END $$;
+
+	CREATE TABLE IF NOT EXISTS ap_approval_request (
+		approval_id VARCHAR(64) PRIMARY KEY,
+		tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE CASCADE,
+		department_id VARCHAR(64) NULL REFERENCES ap_department(department_id) ON DELETE SET NULL,
+		project_id VARCHAR(64) NOT NULL REFERENCES ap_project(project_id) ON DELETE CASCADE,
+		agent_id VARCHAR(64) NOT NULL REFERENCES ap_agent(agent_id) ON DELETE CASCADE,
+		intent_id VARCHAR(64) NULL,
+		amount_base_units BIGINT NOT NULL CHECK (amount_base_units > 0),
+		asset VARCHAR(16) NOT NULL DEFAULT 'CNY',
+		status VARCHAR(32) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'expired', 'consumed')),
+		trigger_reason VARCHAR(64) NOT NULL DEFAULT 'threshold_exceeded',
+		channel VARCHAR(32) NULL,
+		card_msg_id VARCHAR(128) NULL,
+		decided_by VARCHAR(64) NULL,
+		decided_at TIMESTAMPTZ NULL,
+		rejection_reason TEXT NULL,
+		nonce VARCHAR(64) NOT NULL,
+		expires_at TIMESTAMPTZ NOT NULL,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		CONSTRAINT uq_approval_nonce UNIQUE (tenant_id, nonce)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_approval_status ON ap_approval_request(tenant_id, status);
+	CREATE INDEX IF NOT EXISTS idx_approval_agent ON ap_approval_request(agent_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_approval_department ON ap_approval_request(department_id);
+
+	DO $$
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_approval_updated_at') THEN
+			CREATE TRIGGER trg_approval_updated_at BEFORE UPDATE ON ap_approval_request
+				FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
+		END IF;
+	END $$;
+	`
+	_, err := p.db.ExecContext(ctx, ddl)
+	return err
 }
 
 func (p *PostgresService) CreateDepartment(ctx context.Context, tenantID, name string, parentID *string, budgetCapMonthly int64, departmentID string) (*Department, error) {
