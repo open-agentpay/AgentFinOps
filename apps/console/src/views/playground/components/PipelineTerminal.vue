@@ -7,7 +7,7 @@ const props = defineProps<{
   steps: PipelineStep[];
   response: SimulatedResponse | null;
   scenario: PlaygroundScenario;
-  executionStatus: 'idle' | 'running' | 'suspended' | 'success' | 'error';
+  executionStatus: 'idle' | 'running' | 'success' | 'warning' | 'error';
 }>();
 
 const activeTab = ref<'response' | 'curl' | 'audit'>('response');
@@ -157,15 +157,15 @@ function copyToClipboard(text: string) {
         </div>
         <div class="audit-log-line">
           <span class="log-time">[12:08:24.145]</span>
-          <span :class="['log-tag', scenario.amount > scenario.maxSingleTxCap ? 'tag-danger' : (scenario.amount > scenario.hitlThreshold ? 'tag-warning' : 'tag-success')]">
+          <span :class="['log-tag', scenario.amount > scenario.maxSingleTxCap ? 'tag-warning' : 'tag-success']">
             POLICY
           </span>
-          <span class="log-body">Evaluated tx amount ¥{{ scenario.amount.toFixed(2) }} vs threshold ¥{{ scenario.hitlThreshold }}</span>
+          <span class="log-body">Evaluated tx amount ¥{{ scenario.amount.toFixed(2) }} vs single cap ¥{{ scenario.maxSingleTxCap }}</span>
         </div>
         <div v-if="response?.statusCode === 402" class="audit-log-line">
           <span class="log-time">[12:08:24.170]</span>
-          <span class="log-tag tag-warning">HITL_HOLD</span>
-          <span class="log-body">Suspension triggered: Webhook dispatched to Feishu/WeCom approval robot</span>
+          <span class="log-tag tag-warning">HOLD_RELEASE</span>
+          <span class="log-body">Physical block triggered: Hold released with zero loss, autonomous guidance injected</span>
         </div>
         <div v-if="response?.statusCode === 200" class="audit-log-line">
           <span class="log-time">[12:08:24.380]</span>

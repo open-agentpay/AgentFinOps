@@ -7,7 +7,7 @@ import {
 
 const props = defineProps<{
   scenario: PlaygroundScenario;
-  executionStatus: 'idle' | 'running' | 'suspended' | 'success' | 'error';
+  executionStatus: 'idle' | 'running' | 'success' | 'warning' | 'error';
 }>();
 
 const emit = defineEmits<{
@@ -17,7 +17,6 @@ const emit = defineEmits<{
 }>();
 
 const isExecuting = computed(() => props.executionStatus === 'running');
-const isSuspended = computed(() => props.executionStatus === 'suspended');
 
 const modelOptions = [
   { label: 'Claude 3.5 Sonnet (Anthropic)', value: 'claude-3-5-sonnet' },
@@ -109,26 +108,26 @@ const modelOptions = [
         </div>
         <el-row :gutter="12">
           <el-col :span="12">
-            <el-form-item label="HITL 审批阈值 (¥)" style="margin-bottom: 6px">
+            <el-form-item label="单笔限额预警线 (¥)" style="margin-bottom: 6px">
               <el-input-number
-                v-model="scenario.hitlThreshold"
+                v-model="scenario.maxSingleTxCap"
                 :min="1"
                 :step="5"
                 style="width: 100%"
               />
             </el-form-item>
-            <div class="help-text">超过此金额触发 402 挂起与审批</div>
+            <div class="help-text">超过此金额触发 402 拦截并大模型自救</div>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单笔熔断硬顶 (¥)" style="margin-bottom: 6px">
+            <el-form-item label="部门月度总预算 (¥)" style="margin-bottom: 6px">
               <el-input-number
-                v-model="scenario.maxSingleTxCap"
-                :min="50"
-                :step="100"
+                v-model="scenario.departmentQuota"
+                :min="100"
+                :step="500"
                 style="width: 100%"
               />
             </el-form-item>
-            <div class="help-text">超过此金额直接拦截 (403)</div>
+            <div class="help-text">部门级联总额度管控</div>
           </el-col>
         </el-row>
       </div>
@@ -138,21 +137,21 @@ const modelOptions = [
         <div class="amount-display-row">
           <span class="amount-val">¥ {{ scenario.amount.toFixed(2) }}</span>
           <el-tag
-            v-if="scenario.amount > scenario.maxSingleTxCap"
+            v-if="scenario.amount > 1000"
             type="danger"
             effect="dark"
           >
-            突破单笔熔断线
+            突破熔断线 (403)
           </el-tag>
           <el-tag
-            v-else-if="scenario.amount > scenario.hitlThreshold"
+            v-else-if="scenario.amount > scenario.maxSingleTxCap"
             type="warning"
             effect="dark"
           >
-            触发 402 挂起
+            单笔超限拦截 (402)
           </el-tag>
           <el-tag v-else type="success" effect="plain">
-            正常小额放行
+            正常小额放行 (200)
           </el-tag>
         </div>
         <el-slider
@@ -185,13 +184,13 @@ const modelOptions = [
         </el-button>
       </div>
 
-      <div v-if="isSuspended" class="suspended-tip">
+      <div v-if="props.executionStatus === 'warning'" class="suspended-tip">
         <el-alert
           type="warning"
           :closable="false"
           show-icon
-          title="请求已被挂起 (HTTP 402)"
-          description="请在右侧「移动协同卡片模拟器」中点击【批准放行】或【驳回】以完成闭环！"
+          title="请求已被物理阻断 (HTTP 402)"
+          description="单笔预估超出限额，已瞬间解冻释放预扣额度（零损失），请查看右侧智能体自救决策与账本监视器！"
         />
       </div>
     </el-form>

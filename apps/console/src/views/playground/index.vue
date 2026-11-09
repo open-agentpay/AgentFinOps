@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth';
 import { createPlaygroundEngine } from './state/playgroundEngine';
 import ScenarioControls from './components/ScenarioControls.vue';
 import PipelineTerminal from './components/PipelineTerminal.vue';
-import FeishuCardSimulator from './components/FeishuCardSimulator.vue';
+import AutonomousMonitor from './components/AutonomousMonitor.vue';
 import ConversionFooter from './components/ConversionFooter.vue';
 
 const router = useRouter();
@@ -16,7 +16,7 @@ const statusTagType = computed(() => {
   switch (engine.executionStatus.value) {
     case 'running':
       return 'primary';
-    case 'suspended':
+    case 'warning':
       return 'warning';
     case 'success':
       return 'success';
@@ -31,12 +31,12 @@ const statusTagLabel = computed(() => {
   switch (engine.executionStatus.value) {
     case 'running':
       return '正在进行网关预检...';
-    case 'suspended':
-      return 'HTTP 402 已挂起 (待审批)';
+    case 'warning':
+      return 'HTTP 402 已阻断 (智能体自救降级)';
     case 'success':
-      return '执行成功 (已平账)';
+      return '执行成功 (两阶段已平账)';
     case 'error':
-      return '已阻断 / 拦截';
+      return '已阻断 / 熔断切断';
     default:
       return '沙箱就绪 (待发起)';
   }
@@ -67,7 +67,7 @@ function goHome() {
             </el-tag>
           </div>
           <div class="sub-title">
-            无需注册 / 免填 Key / 零费用：10 秒亲身体验「智能体跑飞 $\to$ HTTP 402 挂起 $\to$ 飞书移动端卡片拦截 $\to$ 批准平账」
+            无需注册 / 免填 Key / 零费用：10 秒亲身体验「智能体超限 → 财务防火墙物理拦截 → 大模型自主降级自救 → 两阶段账本零损失解冻」
           </div>
         </div>
       </div>
@@ -102,14 +102,12 @@ function goHome() {
         />
       </div>
 
-      <!-- Col 3: Right Feishu / WeCom Card Simulator -->
+      <!-- Col 3: Right Autonomous LLM Observation & Ledger Monitor -->
       <div class="col-panel col-right">
-        <FeishuCardSimulator
-          :approval="engine.approvalState.value"
+        <AutonomousMonitor
+          :autonomous="engine.autonomousState.value"
           :scenario="engine.currentScenario"
           :execution-status="engine.executionStatus.value"
-          @approve="engine.approveSuspendedRequest('技术主管 (Zhang)')"
-          @reject="engine.rejectSuspendedRequest('单次批量调用超出当周实验预算，请优化 Prompt')"
         />
       </div>
     </div>
