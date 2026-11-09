@@ -4,7 +4,6 @@
 > **状态**：**核心战略指导文件 (Approved Strategic Baseline)**  
 > **核心定位**：**「企业级 AI 行为审计与资金防火墙」（AI Agent Gateway & FinOps）**  
 > **关联规范**：  
-> - [`specs/zh/cn-fiat-and-hitl-approval-spec.md`](/security-hitl/hitl-approval) (法币充值与飞书/企微审批规范)  
 > - [`specs/zh/agent-audit-spec.md`](/security-hitl/agent-audit) (Agent 身份与不可篡改行为审计规范)  
 > - [`specs/zh/wallet-ledger-spec.md`](/finops/wallet-ledger) (内部只追加虚拟账本规范)  
 > - [`specs/currency-and-multichain-spec.md`](/finops/wallet-ledger.md) (CNY 6 位微单位本位制规范)  

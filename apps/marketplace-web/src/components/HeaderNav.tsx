@@ -95,15 +95,6 @@ export function HeaderNav() {
             >
               {t.nav.docs}
             </a>
-            <a
-              href={`${PUBLIC_PLAYGROUND_URL}?utm_source=marketplace_nav`}
-              target="_blank"
-              rel="noreferrer"
-              className="whitespace-nowrap transition-colors hover:text-indigo-600 dark:hover:text-white flex items-center gap-1.5 font-semibold text-indigo-600 dark:text-indigo-400"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>{t.nav.playground}</span>
-            </a>
           </nav>
         </div>
 
@@ -210,16 +201,6 @@ export function HeaderNav() {
               className="rounded-xl px-3 py-2.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-900"
             >
               {t.nav.docs}
-            </a>
-            <a
-              href={`${PUBLIC_PLAYGROUND_URL}?utm_source=marketplace_mobile_nav`}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2.5 transition-colors bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 dark:from-indigo-500/20 dark:to-purple-500/20 dark:text-indigo-300 font-bold"
-            >
-              <Sparkles className="h-4 w-4" />
-              <span>{t.nav.playgroundBtn}</span>
             </a>
           </nav>
 

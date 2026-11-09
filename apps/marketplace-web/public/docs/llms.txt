@@ -24,7 +24,6 @@ AgentFinOps (基于 AgentPay 核心) 是专为生产级 AI Agent 与大语言模
 - [树状预算控制体系](https://aipmedia.cn/docs/finops/budget-control): 四级配额级联约束公式、RPM 滑动窗口熔断。
 - [虚拟钱包与账本规范](https://aipmedia.cn/docs/finops/wallet-ledger): 只追加账本、6 位微单位精度、防二清设计。
 - [合规法币充值与防二清](https://aipmedia.cn/docs/finops/fiat-topup): 微信/支付宝/对公汇款异步 Webhook 与双层幂等入账。
-- [协同审批与 402 异步挂起](https://aipmedia.cn/docs/security-hitl/hitl-approval): 飞书/企微卡片回调、三级风控梯度与客户端自动解挂。
 - [Agent 身份与行为审计黑匣子](https://aipmedia.cn/docs/security-hitl/agent-audit): 时间线流模型、上下文透传与纠纷定责。
 - [防悬挂三态状态机](https://aipmedia.cn/docs/protocol/state-machine): PaymentIntent、Settlement、Fulfillment 正交解耦生命周期。
 - [跨语言协议一致性与错误码](https://aipmedia.cn/docs/protocol/consistency): 统一错误码表与多语言测试向量对齐。

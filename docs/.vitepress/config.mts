@@ -48,7 +48,7 @@ export default withMermaid(
           name: 'AgentFinOps',
           applicationCategory: 'SecurityApplication',
           operatingSystem: 'Cross-platform',
-          description: '企业级 AI Agent 行为审计与资金防火墙网关，提供人在回路 (HITL) 审批、树状组织配额治理与防死循环熔断。',
+          description: '企业级 AI Agent 行为审计与资金防火墙网关，提供自主智能体预算信封、单笔熔断防御、树状组织配额治理与不可篡改审计。',
           url: 'https://aipmedia.cn',
           license: 'https://github.com/open-agentpay/AgentFinOps/blob/main/LICENSE',
         }),
@@ -62,7 +62,7 @@ export default withMermaid(
         { text: '路线图与计划', link: '/roadmap/' },
         { text: '核心架构', link: '/architecture/' },
         { text: 'FinOps 成本治理', link: '/finops/' },
-        { text: 'HITL 审批与审计', link: '/security-hitl/hitl-approval' },
+        { text: '行为安全与审计', link: '/security-hitl/agent-audit' },
         { text: '微支付协议', link: '/protocol/state-machine' },
         { text: '生态联动', link: '/ecosystem/mcp-plugin' },
         { text: '快速开始', link: '/guide/sdk_quickstart' },
@@ -101,9 +101,8 @@ export default withMermaid(
         ],
         '/security-hitl/': [
           {
-            text: '协同内控与人在回路 (HITL)',
+            text: '行为安全与合规审计',
             items: [
-              { text: '协同审批与 402 异步挂起', link: '/security-hitl/hitl-approval' },
               { text: 'Agent 身份与不可篡改行为审计', link: '/security-hitl/agent-audit' },
               { text: '消费与操作审计事件契约', link: '/security-hitl/audit-events' },
             ],
@@ -161,7 +160,7 @@ export default withMermaid(
             items: [
               { text: '全景架构规范', link: '/architecture/' },
               { text: 'FinOps 树状预算治理', link: '/finops/budget-control' },
-              { text: '飞书/企微人在回路 (HITL)', link: '/security-hitl/hitl-approval' },
+              { text: 'Agent 身份与行为审计', link: '/security-hitl/agent-audit' },
               { text: '防悬挂三态状态机', link: '/protocol/state-machine' },
               { text: 'MCP 协议原生支持', link: '/ecosystem/mcp-plugin' },
               { text: 'Langfuse 全链路观测', link: '/ecosystem/langfuse' },
