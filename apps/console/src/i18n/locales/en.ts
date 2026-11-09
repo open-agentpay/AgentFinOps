@@ -52,7 +52,8 @@ export default {
     agents: 'Agent Management & Audit',
     payments: 'Payments & Fulfillment',
     audit: 'Audit Logs',
-    projects: 'Projects'
+    projects: 'Projects',
+    playground: 'Interactive Playground'
   },
   layout: {
     consoleTitle: 'AgentPay Console',

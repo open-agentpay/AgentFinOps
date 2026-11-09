@@ -242,6 +242,18 @@ function switchRole(role: UserRole) {
         </div>
 
         <div class="header-right">
+          <!-- Playground Button -->
+          <el-button
+            size="small"
+            type="primary"
+            plain
+            style="margin-right: 14px"
+            @click="router.push('/playground')"
+          >
+            <el-icon class="mr-1"><VideoPlay /></el-icon>
+            <span>{{ t('体验沙箱') }}</span>
+          </el-button>
+
           <!-- Theme Switcher: Light / Dark -->
           <el-dropdown trigger="click" style="margin-right: 14px" @command="handleThemeChange">
             <el-button size="small" plain class="theme-select-btn">

@@ -52,7 +52,8 @@ export default {
     agents: 'Agent 管理与审计',
     payments: '消费与履约审计',
     audit: '管理操作审计',
-    projects: '项目管理'
+    projects: '项目管理',
+    playground: '在线体验沙箱'
   },
   layout: {
     consoleTitle: 'AgentPay 管理控制台',

@@ -22,6 +22,12 @@ export const routes: RouteRecordRaw[] = [
     meta: { title: 'Sign In', titleKey: 'login.signInButton', requiresAuth: false, hideInMenu: true }
   },
   {
+    path: '/playground',
+    name: 'Playground',
+    component: () => import('@/views/playground/index.vue'),
+    meta: { title: '在线体验沙箱', titleKey: 'menu.playground', icon: 'VideoPlay', requiresAuth: false, hideInMenu: false }
+  },
+  {
     path: '/',
     component: () => import('@/layout/index.vue'),
     redirect: '/dashboard',

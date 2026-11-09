@@ -174,6 +174,10 @@ async function handleQuickRoleLogin(role: UserRole) {
       </div>
 
       <div class="nav-right">
+        <router-link to="/playground" class="nav-link-btn playground-pill-btn">
+          <el-icon><VideoPlay /></el-icon>
+          <span>{{ t('🎮 免登录体验沙箱') }}</span>
+        </router-link>
         <a
           href="https://aipmedia.cn"
           target="_blank"
@@ -469,6 +473,23 @@ async function handleQuickRoleLogin(role: UserRole) {
                 </el-form>
               </el-tab-pane>
             </el-tabs>
+
+            <!-- Playground Quick Entry for Public Visitors -->
+            <div class="playground-quick-entry">
+              <div class="quick-divider">
+                <span class="divider-text">{{ t('或者直接体验在线沙箱') }}</span>
+              </div>
+              <el-button
+                type="primary"
+                plain
+                size="large"
+                class="playground-action-btn"
+                @click="router.push('/playground')"
+              >
+                <el-icon class="mr-1"><VideoPlay /></el-icon>
+                <span>🎮 免登录在线体验资金防火墙 (Playground)</span>
+              </el-button>
+            </div>
           </div>
         </section>
       </div>
@@ -1475,5 +1496,49 @@ async function handleQuickRoleLogin(role: UserRole) {
     gap: 8px;
     text-align: center;
   }
+}
+
+.playground-pill-btn {
+  background: rgba(99, 102, 241, 0.12) !important;
+  color: #6366f1 !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(99, 102, 241, 0.25) !important;
+}
+
+.playground-pill-btn:hover {
+  background: rgba(99, 102, 241, 0.2) !important;
+}
+
+.playground-quick-entry {
+  margin-top: 16px;
+}
+
+.quick-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.quick-divider::before,
+.quick-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px dashed var(--el-border-color-lighter);
+}
+
+.divider-text {
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.playground-action-btn {
+  width: 100%;
+  font-weight: 600;
+  border-radius: 8px;
+  height: 42px;
+  font-size: 13px;
+  letter-spacing: 0.2px;
 }
 </style>
