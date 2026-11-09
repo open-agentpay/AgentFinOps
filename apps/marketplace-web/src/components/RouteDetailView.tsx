@@ -411,7 +411,11 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
                       <span>重新生成</span>
                     </button>
                     <a
-                      href={trialKeyInfo.claimUrl || `${PUBLIC_CONSOLE_URL}/agents?claim_key=${encodeURIComponent(trialKeyInfo.apiKey)}`}
+                      href={
+                        trialKeyInfo.claimUrl && trialKeyInfo.claimUrl.includes('claim_key=')
+                          ? trialKeyInfo.claimUrl
+                          : `${PUBLIC_CONSOLE_URL}/agents?claim_key=${encodeURIComponent(trialKeyInfo.apiKey)}`
+                      }
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition hover:bg-indigo-500"

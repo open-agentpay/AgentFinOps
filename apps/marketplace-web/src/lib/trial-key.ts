@@ -1,4 +1,4 @@
-import { PUBLIC_GATEWAY_URL } from '@/lib/marketplace';
+import { PUBLIC_GATEWAY_URL, PUBLIC_CONSOLE_URL } from '@/lib/marketplace';
 
 export interface TrialKeyInfo {
   apiKey: string;
@@ -29,6 +29,11 @@ export function getStoredTrialKey(): TrialKeyInfo | null {
     if (info.expiresAt * 1000 <= Date.now()) {
       localStorage.removeItem(STORAGE_KEY);
       return null;
+    }
+    // Auto-heal legacy cached claimUrl without claim_key param
+    if (info.apiKey && (!info.claimUrl || !info.claimUrl.includes('claim_key='))) {
+      info.claimUrl = `${PUBLIC_CONSOLE_URL}/agents?claim_key=${encodeURIComponent(info.apiKey)}`;
+      saveStoredTrialKey(info);
     }
     return info;
   } catch {
@@ -94,7 +99,10 @@ export async function requestTrialKey(): Promise<TrialKeyInfo> {
     rateLimitRpm: data.rate_limit_rpm || 6,
     expiresAt: data.expires_at || Math.floor(Date.now() / 1000) + 86400,
     expiresInHours: data.expires_in_hours || 24,
-    claimUrl: data.claim_url || 'https://console.aipmedia.cn',
+    claimUrl:
+      data.claim_url && data.claim_url.includes('claim_key=')
+        ? data.claim_url
+        : `${PUBLIC_CONSOLE_URL}/agents?claim_key=${encodeURIComponent(data.api_key)}`,
     claimedAt: Date.now(),
   };
 

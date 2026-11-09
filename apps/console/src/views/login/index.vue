@@ -127,7 +127,8 @@ async function handleRegisterSubmit() {
         currency: registerForm.currency
       });
       ElMessage.success(`${t('开户成功！已为您初始化租户')}「${res.tenant.name}」(${res.tenant.currency || registerForm.currency})`);
-      router.push('/dashboard');
+      const redirect = (route.query.redirect as string) || '/dashboard';
+      router.push(redirect);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t('开户失败，请重试');
       ElMessage.error(msg);
@@ -146,7 +147,8 @@ async function handleQuickRoleLogin(role: UserRole) {
       role
     });
     ElMessage.info(`${t('已以')} ${role.toUpperCase()} ${t('模式进入控制台')}`);
-    router.push('/');
+    const redirect = (route.query.redirect as string) || '/';
+    router.push(redirect);
   } finally {
     loading.value = false;
   }
