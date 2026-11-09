@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS ap_route (
     summary TEXT NOT NULL DEFAULT '',
     provider_name VARCHAR(128) NOT NULL DEFAULT '',
     is_public BOOLEAN NOT NULL DEFAULT FALSE,
+    is_trial_allowed BOOLEAN NOT NULL DEFAULT TRUE,
     category VARCHAR(64) NOT NULL DEFAULT 'General',
     tags JSONB NOT NULL DEFAULT '[]'::jsonb,
     description_md TEXT NOT NULL DEFAULT '',
@@ -156,6 +157,7 @@ CREATE TABLE IF NOT EXISTS ap_route (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_route_public_slug ON ap_route(slug) WHERE slug IS NOT NULL AND slug != '';
 CREATE INDEX IF NOT EXISTS idx_route_is_public ON ap_route(is_public) WHERE is_public = TRUE;
+CREATE INDEX IF NOT EXISTS idx_route_trial_allowed ON ap_route(is_trial_allowed) WHERE is_trial_allowed = TRUE;
 CREATE INDEX IF NOT EXISTS idx_route_tenant_pattern ON ap_route(tenant_id, path_pattern);
 CREATE TRIGGER trg_route_updated_at BEFORE UPDATE ON ap_route
     FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
@@ -500,4 +502,24 @@ CREATE INDEX IF NOT EXISTS idx_agent_audit_department ON ap_agent_audit_event(de
 CREATE INDEX IF NOT EXISTS idx_agent_audit_tenant_time ON ap_agent_audit_event(tenant_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_audit_session ON ap_agent_audit_event(session_id) WHERE session_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_agent_audit_request ON ap_agent_audit_event(request_id);
+
+-- ============================================================================
+-- 5. Public Sandbox & Zero-Friction Trial Seed
+-- ============================================================================
+
+INSERT INTO ap_tenant (tenant_id, name, currency, status)
+VALUES ('ten_public_sandbox', 'OpenAgentPay Public Sandbox', 'CNY', 'active')
+ON CONFLICT (tenant_id) DO NOTHING;
+
+INSERT INTO ap_project (project_id, tenant_id, name, budget_cap_base_units, status)
+VALUES ('prj_sandbox', 'ten_public_sandbox', 'Sandbox Trial Project', 1000000000, 'active')
+ON CONFLICT (project_id) DO NOTHING;
+
+INSERT INTO ap_agent (agent_id, tenant_id, project_id, name, status)
+VALUES ('agt_sandbox', 'ten_public_sandbox', 'prj_sandbox', 'Sandbox Guest Agent', 'active')
+ON CONFLICT (project_id, name) DO NOTHING;
+
+INSERT INTO ap_wallet (wallet_id, tenant_id, asset, status, available_cache)
+VALUES ('wlt_public_sandbox', 'ten_public_sandbox', 'CNY', 'active', 100000000000)
+ON CONFLICT (tenant_id) DO NOTHING;
 

@@ -64,8 +64,10 @@ export function buildAnswerFirstTldr(
  */
 export function buildPythonSdkSnippet(
   route: MarketplaceRouteItem,
-  _locale: string = 'zh'
+  _locale: string = 'zh',
+  activeApiKey?: string
 ): string {
+  const effectiveKey = activeApiKey || 'apk_live_xxx';
   const suggestedBudgetUnits = Math.max(
     250_000,
     (route.price_base_units || 50_000) * 5
@@ -106,7 +108,7 @@ policy = SQLitePolicyEngine.create_in_memory(
 
 # 2. 客户端直接传入 api_key，自动开启虚拟钱包模式与 402 自动握手
 client = AgentPayClient(
-    api_key=os.getenv("AGENT_API_KEY", "apk_live_xxx"),
+    api_key=os.getenv("AGENT_API_KEY", "${effectiveKey}"),
     policy=policy,
 )
 
@@ -123,8 +125,10 @@ print("Response:", response.json())`;
  */
 export function buildTypescriptSdkSnippet(
   route: MarketplaceRouteItem,
-  _locale: string = 'zh'
+  _locale: string = 'zh',
+  activeApiKey?: string
 ): string {
+  const effectiveKey = activeApiKey || 'apk_live_xxx';
   const suggestedBudgetUnits = Math.max(
     250_000,
     (route.price_base_units || 50_000) * 5
@@ -169,7 +173,7 @@ const policy = SQLitePolicyEngine.createInMemory(
 
 // 2. 客户端直接传入 apiKey
 const client = new AgentPayClient({
-  apiKey: process.env.AGENT_API_KEY ?? 'apk_live_xxx',
+  apiKey: process.env.AGENT_API_KEY ?? '${effectiveKey}',
   policy,
 });
 
@@ -183,8 +187,10 @@ console.log('Response:', await response.json());`;
  */
 export function buildMcpConfigSnippet(
   route: MarketplaceRouteItem,
-  platform: 'workbuddy' | 'claude_cursor' | 'sdk' = 'workbuddy'
+  platform: 'workbuddy' | 'claude_cursor' | 'sdk' = 'workbuddy',
+  activeApiKey?: string
 ): string {
+  const effectiveKey = activeApiKey || 'apk_live_your_api_key';
   const toolName = (route.slug || route.route_id || 'mcp_tool').replace(/[^a-zA-Z0-9_-]/g, '_');
   const sseUrl = `${PUBLIC_GATEWAY_URL}/v1/mcp/sse?route_id=${route.route_id || route.slug}`;
   const priceStr = formatCreditsPrice(route.price_base_units);
@@ -196,7 +202,7 @@ export function buildMcpConfigSnippet(
     "${toolName}": {
       "url": "${sseUrl}",
       "headers": {
-        "Authorization": "Bearer apk_live_your_api_key"
+        "Authorization": "Bearer ${effectiveKey}"
       }
     }
   }
@@ -210,7 +216,7 @@ export function buildMcpConfigSnippet(
     "${toolName}": {
       "url": "${sseUrl}",
       "headers": {
-        "Authorization": "Bearer apk_live_your_api_key"
+        "Authorization": "Bearer ${effectiveKey}"
       }
     }
   }
@@ -228,12 +234,12 @@ const gatewaySseUrl = new URL('${sseUrl}');
 const transport = new SSEClientTransport(gatewaySseUrl, {
   eventSourceInit: {
     headers: {
-      Authorization: \`Bearer \${process.env.AGENT_API_KEY ?? 'apk_live_your_api_key'}\`,
+      Authorization: \`Bearer \${process.env.AGENT_API_KEY ?? '${effectiveKey}'}\`,
     },
   },
   requestInit: {
     headers: {
-      Authorization: \`Bearer \${process.env.AGENT_API_KEY ?? 'apk_live_your_api_key'}\`,
+      Authorization: \`Bearer \${process.env.AGENT_API_KEY ?? '${effectiveKey}'}\`,
     },
   },
 });
