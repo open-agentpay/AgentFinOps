@@ -1101,6 +1101,24 @@ export const agentApi = {
     }
   },
 
+  async claimTrialKey(
+    tenantId: string,
+    payload: { api_key: string; project_id?: string; agent_id?: string }
+  ): Promise<{ success: boolean; message: string; api_key: AgentAPIKey }> {
+    try {
+      const response = await apiClient.post<{ success: boolean; message: string; api_key: AgentAPIKey }>(
+        `/tenants/${tenantId}/claim-trial-key`,
+        payload
+      );
+      return response.data;
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        throw new Error(err.response.data.error.message || '试用 Key 转正认领失败');
+      }
+      throw err;
+    }
+  },
+
   // 时间线读取：如果后端有时间线读模型则直接调用，未就绪时启用预留 Mock 引擎
   async getAgentTimeline(
     tenantId: string,

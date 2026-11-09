@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
 import { useTenantStore } from '@/stores/tenant';
@@ -9,6 +9,7 @@ import { agentApi } from '@/api/client';
 import { useI18n } from '@/i18n';
 
 const router = useRouter();
+const route = useRoute();
 const { t } = useI18n();
 import type {
   Agent,
@@ -181,7 +182,12 @@ watch(
 );
 
 onMounted(() => {
-  loadAgents();
+  loadAgents().then(() => {
+    const claimKeyQuery = route.query.claim_key as string;
+    if (claimKeyQuery && claimKeyQuery.startsWith('apk_live_guest_')) {
+      openClaimTrialDialog(claimKeyQuery);
+    }
+  });
 });
 
 // Filtered agents
@@ -542,6 +548,61 @@ async function handleRevokeKey(key: AgentAPIKey) {
     ElMessage.error(msg);
   }
 }
+
+// Claim Trial Key State
+const claimTrialDialogVisible = ref(false);
+const claimKeyInput = ref('');
+const claimProjectId = ref('');
+const claimAgentId = ref('');
+const claimLoading = ref(false);
+
+function openClaimTrialDialog(prefilledKey?: string) {
+  claimKeyInput.value = prefilledKey || '';
+  if (tenantStore.availableProjects.length > 0 && !claimProjectId.value) {
+    claimProjectId.value = tenantStore.availableProjects[0].project_id;
+  }
+  if (agents.value.length > 0 && !claimAgentId.value) {
+    claimAgentId.value = agents.value[0].agent_id;
+  }
+  claimTrialDialogVisible.value = true;
+}
+
+async function handleClaimTrialKey() {
+  const rawKey = claimKeyInput.value.trim();
+  if (!rawKey) {
+    ElMessage.warning(t('请输入待认领转正的测试 Key'));
+    return;
+  }
+  if (!rawKey.startsWith('apk_live_guest_')) {
+    ElMessage.warning(t('仅支持以 apk_live_guest_ 开头的集市免密测试 Key'));
+    return;
+  }
+
+  claimLoading.value = true;
+  try {
+    const tenantId = tenantStore.currentTenantId;
+    const res = await agentApi.claimTrialKey(tenantId, {
+      api_key: rawKey,
+      project_id: claimProjectId.value || undefined,
+      agent_id: claimAgentId.value || undefined
+    });
+    ElMessage.success({
+      message: res.message || t('试用 Key 认领转正成功！已无缝升级为企业长效密钥。'),
+      duration: 6000
+    });
+    claimTrialDialogVisible.value = false;
+    claimKeyInput.value = '';
+    if (route.query.claim_key) {
+      router.replace({ path: route.path, query: { ...route.query, claim_key: undefined } });
+    }
+    await loadAgents();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? t(err.message) : t('认领转正失败');
+    ElMessage.error(msg);
+  } finally {
+    claimLoading.value = false;
+  }
+}
 </script>
 
 <template>
@@ -560,6 +621,9 @@ async function handleRevokeKey(key: AgentAPIKey) {
       </div>
       <div class="header-actions">
         <el-button icon="Refresh" @click="loadAgents">{{ $t('刷新') }}</el-button>
+        <el-button type="warning" plain icon="Key" @click="openClaimTrialDialog()">
+          {{ $t('⚡ 认领试用 Key 转正') }}
+        </el-button>
         <PermissionGate :roles="['owner', 'admin']">
           <el-button type="primary" icon="Plus" @click="openCreateAgentDialog">
             {{ $t('新建 Agent 实体 (含 KYA 登记)') }}
@@ -1273,6 +1337,88 @@ async function handleRevokeKey(key: AgentAPIKey) {
           </el-table-column>
         </el-table>
       </div>
+    </el-dialog>
+
+    <!-- Claim Trial API Key Dialog -->
+    <el-dialog
+      v-model="claimTrialDialogVisible"
+      :title="$t('⚡ 试用 Key 一键转正认领')"
+      width="620px"
+      destroy-on-close
+    >
+      <div style="line-height: 1.6; font-size: 13px;">
+        <el-alert
+          type="success"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 20px"
+        >
+          <template #title>
+            <strong>{{ $t('零配置代码无缝转正（Zero Migration Friction）') }}</strong>
+          </template>
+          <div>
+            {{ $t('将您在开放集市免密申领的试用 Key（apk_live_guest_xxx）直接绑定迁移至当前企业租户。转正后去除 24 小时过期限制与 ¥0.50 单笔额度上限，') }}
+            <strong>{{ $t('Cursor、WorkBuddy 及项目代码中配置的 Key 完全无需改动，即可长期稳定运行！') }}</strong>
+          </div>
+        </el-alert>
+
+        <el-form label-position="top">
+          <el-form-item :label="$t('待转正的试用 Key (API Key)')" required>
+            <el-input
+              v-model="claimKeyInput"
+              placeholder="apk_live_guest_..."
+              clearable
+              font-family="monospace"
+            />
+            <div class="text-muted" style="margin-top: 4px; font-size: 12px;">
+              {{ $t('支持从集市自动携带或手动粘贴在集市获得的 apk_live_guest_ 开头密钥') }}
+            </div>
+          </el-form-item>
+
+          <el-form-item :label="$t('归属业务项目')">
+            <el-select
+              v-model="claimProjectId"
+              :placeholder="$t('请选择项目（默认分配至首个有效项目）')"
+              style="width: 100%"
+              clearable
+            >
+              <el-option
+                v-for="p in tenantStore.availableProjects"
+                :key="p.project_id"
+                :label="p.name"
+                :value="p.project_id"
+              />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item :label="$t('绑定 Agent 实体')">
+            <el-select
+              v-model="claimAgentId"
+              :placeholder="$t('请选择绑定的 Agent（选填）')"
+              style="width: 100%"
+              clearable
+            >
+              <el-option
+                v-for="a in agents"
+                :key="a.agent_id"
+                :label="`${a.name} (${a.agent_id})`"
+                :value="a.agent_id"
+              />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <el-button @click="claimTrialDialogVisible = false">{{ $t('取消') }}</el-button>
+        <el-button
+          type="primary"
+          :loading="claimLoading"
+          @click="handleClaimTrialKey"
+        >
+          {{ $t('确认认领并转正') }}
+        </el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
