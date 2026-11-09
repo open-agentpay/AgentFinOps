@@ -10,6 +10,8 @@ export interface Translations {
     docs: string;
     gatewayStatus: string;
     consoleBtn: string;
+    playground: string;
+    playgroundBtn: string;
     langSwitch: string;
   };
   homePage: {
@@ -18,6 +20,7 @@ export interface Translations {
     heroSubtitle: string;
     btnGoMarketplace: string;
     btnReadDocs: string;
+    btnPlayground: string;
     btnCopyPip: string;
     goldenRuleLabel: string;
     goldenRule: string;
@@ -61,6 +64,7 @@ export interface Translations {
     storefront: string;
     registryApi: string;
     sellerConsole: string;
+    playground: string;
   };
   hero: {
     badgeEconomy: string;

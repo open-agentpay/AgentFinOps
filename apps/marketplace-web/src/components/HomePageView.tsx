@@ -18,6 +18,7 @@ import {
 import {
   PUBLIC_DOCS_URL,
   PUBLIC_GATEWAY_URL,
+  PUBLIC_PLAYGROUND_URL,
 } from '@/lib/marketplace';
 import { useI18n } from '@/i18n/context';
 import { CopyButton } from '@/components/CopyButton';
@@ -158,9 +159,20 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
 
           {/* Action CTAs */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <a
+              href={`${PUBLIC_PLAYGROUND_URL}?utm_source=marketplace_hero`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 transition-all hover:from-indigo-500 hover:to-purple-500 hover:scale-[1.02]"
+            >
+              <Sparkles className="h-4 w-4 text-yellow-300 animate-pulse" />
+              <span>{t.homePage.btnPlayground}</span>
+              <ArrowRight className="h-4 w-4" />
+            </a>
+
             <Link
               href="/marketplace"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all hover:bg-indigo-500 hover:shadow-indigo-600/40"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-400 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:text-white"
             >
               <span>{t.homePage.btnGoMarketplace}</span>
               <ArrowRight className="h-4 w-4" />

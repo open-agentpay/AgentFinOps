@@ -15,6 +15,9 @@ export const PUBLIC_SITE_URL =
 export const PUBLIC_CONSOLE_URL =
   process.env.NEXT_PUBLIC_CONSOLE_URL || 'https://console.aipmedia.cn';
 
+export const PUBLIC_PLAYGROUND_URL =
+  process.env.NEXT_PUBLIC_PLAYGROUND_URL || `${PUBLIC_CONSOLE_URL}/playground`;
+
 export const PUBLIC_DOCS_URL =
   process.env.NEXT_PUBLIC_DOCS_URL || '/docs/';
 

@@ -7,6 +7,7 @@ import {
   PUBLIC_DOCS_URL,
   PUBLIC_GATEWAY_URL,
   PUBLIC_GITHUB_URL,
+  PUBLIC_PLAYGROUND_URL,
 } from '@/lib/marketplace';
 import { useI18n } from '@/i18n/context';
 
@@ -52,6 +53,14 @@ export function FooterNav() {
             className="hover:text-slate-900 dark:hover:text-white transition-colors"
           >
             {t.footer.registryApi}
+          </a>
+          <a
+            href={`${PUBLIC_PLAYGROUND_URL}?utm_source=marketplace_footer`}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-indigo-600 dark:hover:text-white transition-colors text-indigo-600 dark:text-indigo-400 font-semibold"
+          >
+            {t.footer.playground}
           </a>
           <a
             href={PUBLIC_CONSOLE_URL}

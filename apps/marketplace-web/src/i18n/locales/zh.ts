@@ -10,6 +10,8 @@ export const zh: Translations = {
     docs: '核心文档',
     gatewayStatus: '网关:',
     consoleBtn: '控制台 (Console)',
+    playground: '在线演示沙箱',
+    playgroundBtn: '在线体验沙箱 🎮',
     langSwitch: '语言 / Lang',
   },
   homePage: {
@@ -19,6 +21,7 @@ export const zh: Translations = {
       '大模型可以提议支付，但永远不能自行授权支付。原生支持「企业多币种虚拟钱包（CNY/USD）」与「x402 协议」按次微支付，内置单笔限额、24h 滚动预算与死循环自动熔断，彻底杜绝 Agent 刷爆账单与资金透支风险。',
     btnGoMarketplace: '前往 API 功能商店 (体验 SDK)',
     btnReadDocs: '查阅技术文档',
+    btnPlayground: '🎮 免配置在线体验沙箱 (Playground)',
     btnCopyPip: 'pip install agentfinops',
     goldenRuleLabel: '核心准则',
     goldenRule:
@@ -111,6 +114,7 @@ export const zh: Translations = {
     storefront: '功能商店',
     registryApi: '注册表 JSON API',
     sellerConsole: '管理控制台',
+    playground: '在线演示沙箱',
   },
   hero: {
     badgeEconomy: 'HTTP 402 (x402) 原生机器微支付市场',
