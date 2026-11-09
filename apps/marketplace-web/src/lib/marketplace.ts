@@ -217,38 +217,54 @@ export function buildMcpConfigSnippet(
 }`;
   }
 
-  // SDK Interceptor snippet
-  return `import { McpToolInterceptor, InMemoryToolQuotaGuard } from 'agentpay-core-sdk';
+  // SDK Interceptor snippet with real gateway SSE transport and clean core boundaries
+  const amountCny = (route.price_base_units || 50000) / 1000000.0;
+  return `import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { McpToolInterceptor, InMemoryToolQuotaGuard } from 'agentpay-core-sdk';
 
-// 1. 初始化本地/企业级财务配额守卫 (单笔上限 ¥50.00，日预算 ¥500.00)
-const guard = new InMemoryToolQuotaGuard({
-  maxPerTxBaseUnits: 50000000n,
-  dailyBudgetBaseUnits: 500000000n,
-});
-
-// 2. 挂载 MCP 客户端拦截器 (两阶段预扣与自动防悬挂)
-const interceptor = new McpToolInterceptor({
-  guard,
-  defaultMetadata: {
-    price_base_units: ${route.price_base_units || 50000},
-    price_cny: '${priceStr}',
-    single_tx_cap: 50000000,
+// 1. 初始化标准 MCP 客户端，配置网关地址与 API Key
+const gatewaySseUrl = new URL('${sseUrl}');
+const transport = new SSEClientTransport(gatewaySseUrl, {
+  eventSourceInit: {
+    headers: {
+      Authorization: \`Bearer \${process.env.AGENT_API_KEY ?? 'apk_live_your_api_key'}\`,
+    },
+  },
+  requestInit: {
+    headers: {
+      Authorization: \`Bearer \${process.env.AGENT_API_KEY ?? 'apk_live_your_api_key'}\`,
+    },
   },
 });
+const mcpClient = new Client({ name: 'my-agent', version: '1.0.0' }, { capabilities: {} });
+await mcpClient.connect(transport);
 
-// 3. 安全调用该 MCP 工具 (超额自动向大模型返回结构化引导，不引发崩溃)
-const result = await interceptor.interceptCall(
+// 2. 初始化核心通用配额守卫 (单笔上限 ¥50.00，日预算 ¥500.00)
+const guard = new InMemoryToolQuotaGuard({
+  maxPerCallCny: 50.0,
+  rollingBudgetCny: 500.0,
+});
+
+// 3. 挂载 MCP 客户端拦截器 (两阶段预扣与自动防悬挂)
+const interceptor = new McpToolInterceptor({
+  guard,
+  defaultCostCny: ${amountCny.toFixed(2)},
+});
+
+// 4. 安全调用网关 MCP 工具 (超额自动向大模型返回结构化引导，防死循环)
+const result = await interceptor.callTool(
   {
     toolName: '${toolName}',
     arguments: ${JSON.stringify(route.sample_params || { query: 'test' })},
     agentId: 'bot_worker_1',
-    departmentId: 'dept_marketing',
   },
-  async (args) => {
-    // 实际发起网络调用至网关 MCP SSE 端点
-    return { content: [{ type: 'text', text: '执行完成' }] };
+  async (name, args) => {
+    // 实际通过 MCP 协议发送至 gate.aipmedia.cn 网关执行
+    return await mcpClient.callTool({ name, arguments: args });
   }
-);`;
+);
+console.log('Result:', result);`;
 }
 
 /**
