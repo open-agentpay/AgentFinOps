@@ -78,7 +78,7 @@ export const zh: Translations = {
     railATitle: '通道 A：多币种虚拟钱包与内部账本 (CNY / USD Wallet)',
     railASubtitle: '面向国内及企业内部多智能体编队、人民币/美元毫厘级计费与预算审计',
     railADesc:
-      '支持租户级 CNY / USD / EUR 6 位微单位账本（¥0.000001 精度）。Agent 仅需持有受管控的 API Key，网关基于行级锁自动完成冻结 (HOLD)、交付成功实扣 (CAPTURE) 与失败解冻 (RELEASE)。',
+      '支持租户级 CNY / USD 法币账本（国内版本精确到分 ¥0.01）。Agent 仅需持有受管控的 API Key，网关基于行级锁自动完成冻结 (HOLD)、交付成功实扣 (CAPTURE) 与失败解冻 (RELEASE)。',
     railASteps: [
       '1. Agent 携带受限 API Key 发起请求，网关下发 x402 虚拟钱包挑战',
       '2. 本地策略防火墙核验单笔限额与 24h 预算，提交挑战授权',

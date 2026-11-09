@@ -216,10 +216,10 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
             <span>支持 x402 协议 (CNY / Credits)</span>
           </div>
           <div className="mt-2 font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
-            ¥0.000001
+            ¥0.01
           </div>
           <div className="mt-1 text-xs text-slate-500">
-            支持 6 位微单位 CNY/USD 虚拟账本与 x402 协议结算
+            支持人民币 (CNY) 精确到分结算与防跑飞风控
           </div>
         </div>
 

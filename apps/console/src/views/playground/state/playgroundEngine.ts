@@ -236,7 +236,7 @@ export function createPlaygroundEngine() {
       headers: {
         'content-type': 'application/json',
         'x-agentpay-hold-id': 'hold_90823412',
-        'x-agentpay-cost-cny': currentScenario.amount.toFixed(4)
+        'x-agentpay-cost-cny': currentScenario.amount.toFixed(2)
       },
       body: {
         code: 'SUCCESS',
@@ -273,7 +273,7 @@ export function createPlaygroundEngine() {
         'content-type': 'application/json',
         'x-agentpay-approval-id': approvalState.value.approvalId || '',
         'x-agentpay-approver': approverName,
-        'x-agentpay-cost-cny': currentScenario.amount.toFixed(4)
+        'x-agentpay-cost-cny': currentScenario.amount.toFixed(2)
       },
       body: {
         code: 'SUCCESS',

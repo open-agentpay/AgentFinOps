@@ -118,9 +118,9 @@ const budgetProgressStatus = computed(() => {
 function formatCredits(baseUnits: number | undefined): string {
   if (baseUnits === undefined || isNaN(baseUnits)) return '0.00';
   const val = baseUnits / 1000000;
-  return val.toLocaleString('en-US', {
+  return val.toLocaleString('zh-CN', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 4
+    maximumFractionDigits: 2
   });
 }
 

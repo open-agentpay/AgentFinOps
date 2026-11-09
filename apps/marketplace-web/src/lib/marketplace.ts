@@ -25,13 +25,11 @@ export const PUBLIC_GITHUB_URL =
   process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/agentfinops/AgentFinOps';
 
 /**
- * Formats 6-decimal Credits base units into a clean human-readable string (e.g. "0.001" or "0.05").
+ * Formats CNY/Credits price into a clean human-readable string with 2 decimal places (分, e.g. "0.05" or "10.00").
  */
 export function formatCreditsPrice(baseUnits: number): string {
   const val = baseUnits / 1_000_000;
-  if (val === 0) return '0.00';
-  if (val < 0.001) return val.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
-  return val.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+  return val.toFixed(2);
 }
 
 /**

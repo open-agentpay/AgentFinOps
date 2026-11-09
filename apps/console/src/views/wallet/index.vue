@@ -167,11 +167,11 @@ async function handleCurrencyChange(newCurr: 'CNY' | 'USD' | 'EUR') {
 }
 
 function formatCredits(baseUnits: number | undefined): string {
-  if (baseUnits === undefined || isNaN(baseUnits)) return '0.0000';
+  if (baseUnits === undefined || isNaN(baseUnits)) return '0.00';
   const val = baseUnits / 1000000;
-  return val.toLocaleString('en-US', {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 6
+  return val.toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   });
 }
 

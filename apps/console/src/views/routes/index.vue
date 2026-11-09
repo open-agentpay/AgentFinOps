@@ -968,7 +968,7 @@ function copyToClipboard(text: string) {
         <el-table-column :label="$t('单次定价')" width="180">
           <template #default="{ row }">
             <span class="price-text">
-              {{ tenantStore.currencySymbol }} {{ (row.price_base_units / 1000000).toFixed(4) }} {{ tenantStore.currentCurrency }}
+              {{ tenantStore.currencySymbol }} {{ (row.price_base_units / 1000000).toFixed(2) }} {{ tenantStore.currentCurrency }}
             </span>
           </template>
         </el-table-column>

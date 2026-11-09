@@ -56,10 +56,10 @@ const metrics = computed(() => {
 
   return {
     totalTransactions: totalCount.value,
-    totalSpentCredits: (totalAmount / 1_000_000).toFixed(4),
+    totalSpentCredits: (totalAmount / 1_000_000).toFixed(2),
     successRate,
     recoveryCount,
-    unbilledSavedCredits: (unbilledSavedAmount / 1_000_000).toFixed(4)
+    unbilledSavedCredits: (unbilledSavedAmount / 1_000_000).toFixed(2)
   };
 });
 
@@ -68,7 +68,7 @@ function formatCredits(baseUnits: number): string {
   const sym = tenantStore.currencySymbol;
   const code = tenantStore.currentCurrency;
   if (baseUnits === 0) return `${sym}0.00 ${code}`;
-  return `${sym}${(baseUnits / 1_000_000).toFixed(4)} ${code}`;
+  return `${sym}${(baseUnits / 1_000_000).toFixed(2)} ${code}`;
 }
 
 // Format date

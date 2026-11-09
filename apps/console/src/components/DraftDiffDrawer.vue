@@ -49,7 +49,7 @@ function getActionTagType(action: string): 'success' | 'warning' | 'danger' | 'i
 
 function formatPrice(units?: unknown): string {
   if (typeof units !== 'number') return '-';
-  return (units / 1000000).toFixed(4);
+  return (units / 1000000).toFixed(2);
 }
 </script>
 

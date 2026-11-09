@@ -48,17 +48,20 @@ export const useTenantStore = defineStore('tenant', () => {
     return SUPPORTED_CURRENCIES[currentCurrency.value]?.symbol || '$';
   });
 
-  function formatAmount(baseUnits: number | undefined, minDecimals = 4): string {
-    if (baseUnits === undefined || isNaN(baseUnits)) return '0.0000';
+  function formatAmount(baseUnits: number | undefined, minDecimals?: number): string {
+    const isDomestic = currentCurrency.value === 'CNY';
+    const decimals = minDecimals !== undefined ? minDecimals : (isDomestic ? 2 : 2);
+    if (baseUnits === undefined || isNaN(baseUnits)) return (0).toFixed(decimals);
     const val = baseUnits / 1000000;
-    return val.toLocaleString('en-US', {
-      minimumFractionDigits: minDecimals,
-      maximumFractionDigits: 6
+    return val.toLocaleString('zh-CN', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
     });
   }
 
   function formatCurrency(baseUnits: number | undefined, showSymbol = false): string {
-    const numStr = formatAmount(baseUnits, 4);
+    const isDomestic = currentCurrency.value === 'CNY';
+    const numStr = formatAmount(baseUnits, isDomestic ? 2 : 2);
     if (showSymbol) {
       return `${currencySymbol.value}${numStr} ${currentCurrency.value}`;
     }
