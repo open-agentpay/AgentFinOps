@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import { useAuthStore } from '@/stores/auth';
 import { useTenantStore } from '@/stores/tenant';
 import PermissionGate from '@/components/PermissionGate.vue';
+import TopUpModal from '@/components/TopUpModal.vue';
 import { t } from '@/i18n';
 import { walletApi } from '@/api/client';
 import type {
@@ -40,6 +41,15 @@ const topupPageSize = ref(10);
 // Reconciliation State
 const reconciling = ref(false);
 const reconciliationReport = ref<ReconciliationReport | null>(null);
+
+// Online TopUp Modal State
+const topupModalVisible = ref(false);
+function openTopUpModal() {
+  topupModalVisible.value = true;
+}
+function onTopUpSuccess(_order: TopUpOrder) {
+  loadWalletData();
+}
 
 // Admin Grant Dialog State
 const grantDialogVisible = ref(false);
@@ -543,9 +553,16 @@ function getTopupStatusType(status: TopUpStatus) {
           </template>
         </PermissionGate>
 
+        <!-- Online TopUp (Primary Action) -->
+        <PermissionGate :roles="['owner', 'admin', 'operator']">
+          <el-button type="success" icon="ShoppingCart" @click="openTopUpModal">
+            {{ $t('⚡ 在线充值 (扫码充值)') }}
+          </el-button>
+        </PermissionGate>
+
         <!-- Role-gated Admin Grant -->
         <PermissionGate :roles="['owner', 'admin']">
-          <el-button type="primary" icon="Money" @click="openGrantDialog">
+          <el-button type="primary" plain icon="Money" @click="openGrantDialog">
             {{ $t('管理员发放充值') }}
           </el-button>
           <template #fallback>
@@ -1156,6 +1173,13 @@ function getTopupStatusType(status: TopUpStatus) {
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- TopUp Modal -->
+    <TopUpModal
+      v-model="topupModalVisible"
+      :tenant-id="tenantStore.currentTenantId"
+      @success="onTopUpSuccess"
+    />
   </div>
 </template>
 

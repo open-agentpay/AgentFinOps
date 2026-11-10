@@ -652,6 +652,32 @@ export const walletApi = {
     }
   },
 
+  async createTopUpOrder(tenantId: string, payload: { amount_cents: number; channel?: string }): Promise<{ topup_order: TopUpOrder; code_url: string; expires_at: number }> {
+    if (!payload.amount_cents || payload.amount_cents <= 0) {
+      throw new Error('充值金额必须大于 0');
+    }
+    const response = await apiClient.post<{ topup_order: TopUpOrder; code_url: string; expires_at: number }>(
+      `/tenants/${tenantId}/topup-orders`,
+      payload
+    );
+    return response.data;
+  },
+
+  async getTopUpOrderStatus(tenantId: string, topupId: string): Promise<TopUpOrder> {
+    const response = await apiClient.get<{ topup_order: TopUpOrder }>(
+      `/tenants/${tenantId}/topup-orders/${topupId}`
+    );
+    return response.data.topup_order;
+  },
+
+  async simulateMockPayment(outTradeNo: string): Promise<{ success: boolean; message: string; order: TopUpOrder }> {
+    const response = await apiClient.post<{ success: boolean; message: string; order: TopUpOrder }>(
+      `/public/mock-pay/confirm`,
+      { out_trade_no: outTradeNo }
+    );
+    return response.data;
+  },
+
   async adminGrant(tenantId: string, payload: AdminGrantPayload): Promise<Wallet> {
     if (!payload.reason || !payload.reason.trim()) {
       throw new Error('必须填写发放原因与依据 (Required reason)');
