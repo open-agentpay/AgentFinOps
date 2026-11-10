@@ -541,8 +541,8 @@ function getTopupStatusType(status: TopUpStatus) {
           </el-button>
         </PermissionGate>
 
-        <!-- Role-gated Adjustment -->
-        <PermissionGate :roles="['owner', 'admin']">
+        <!-- Role-gated Adjustment (Hidden) -->
+        <PermissionGate v-if="false" :roles="['owner', 'admin']">
           <el-button type="warning" plain icon="EditPen" @click="openAdjustDialog">
             {{ $t('人工调账') }}
           </el-button>
@@ -560,8 +560,8 @@ function getTopupStatusType(status: TopUpStatus) {
           </el-button>
         </PermissionGate>
 
-        <!-- Role-gated Admin Grant -->
-        <PermissionGate :roles="['owner', 'admin']">
+        <!-- Role-gated Admin Grant (Hidden) -->
+        <PermissionGate v-if="false" :roles="['owner', 'admin']">
           <el-button type="primary" plain icon="Money" @click="openGrantDialog">
             {{ $t('管理员发放充值') }}
           </el-button>
