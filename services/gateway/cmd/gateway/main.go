@@ -22,7 +22,6 @@ import (
 	"github.com/open-agentpay/agent-core-sdk/gateway/metrics"
 	"github.com/open-agentpay/agent-core-sdk/gateway/rcu"
 	"github.com/open-agentpay/agent-core-sdk/gateway/server"
-	"github.com/open-agentpay/agent-core-sdk/gateway/wallet"
 )
 
 func main() {
@@ -122,7 +121,7 @@ func main() {
 	deptHandler := department.NewHTTPHandler(deptSvc)
 
 	// 5. Initialize fiat payment provider (WeChat Pay V3 or Sandbox Mock Provider)
-	var payProvider wallet.PaymentProvider
+	var payProvider payment.PaymentProvider
 	wxAppID := os.Getenv("WECHAT_PAY_APPID")
 	wxMchID := os.Getenv("WECHAT_PAY_MCHID")
 	wxSerial := os.Getenv("WECHAT_PAY_SERIAL_NO")
@@ -151,18 +150,25 @@ func main() {
 		log.Info("initialized Sandbox Mock Payment Provider (Zero-Friction Dev/Demo Mode)")
 	}
 
+	payHandler := payment.NewHandler(payProvider)
+
 	// 6. Initialize metrics and HTTP server from agent-core-sdk
 	m := metrics.New()
 	srv, err := server.New(cfg, rcuMgr, m,
 		server.WithPolicyEvaluator(cascadeEnforcer),
 		server.WithSpendRecorder(cascadeRecorder),
 		server.WithTenantSubresource("departments", deptHandler),
-		server.WithPaymentProvider(payProvider),
+		server.WithTenantSubresource("topup-orders", payHandler.TenantSubresourceHandler()),
+		server.WithExtraRoute("/api/v1/public/mock-pay/confirm", payHandler.MockConfirmHandler()),
+		server.WithExtraRoute("/api/v1/public/webhooks/wechat-pay", payHandler.WeChatWebhookHandler()),
 	)
 	if err != nil {
 		log.Error("failed to create gateway server", slog.Any("error", err))
 		os.Exit(1)
 	}
+
+	// Bind Core services to business payment handler
+	payHandler.BindServices(srv.AdminService(), srv.WalletService())
 
 	// 5. Start listener in background goroutine
 	serverErrCh := make(chan error, 1)

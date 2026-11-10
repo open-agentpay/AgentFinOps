@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/open-agentpay/agent-core-sdk/gateway/wallet"
 )
 
 // MockPaymentProvider provides a zero-setup sandbox payment simulator.
@@ -28,7 +26,7 @@ func (m *MockPaymentProvider) Name() string {
 	return "mock"
 }
 
-func (m *MockPaymentProvider) CreatePrepayOrder(ctx context.Context, req *wallet.PrepayOrderRequest) (*wallet.PrepayOrderResult, error) {
+func (m *MockPaymentProvider) CreatePrepayOrder(ctx context.Context, req *PrepayOrderRequest) (*PrepayOrderResult, error) {
 	if req.AmountCents <= 0 {
 		return nil, errors.New("payment amount must be greater than 0")
 	}
@@ -37,14 +35,14 @@ func (m *MockPaymentProvider) CreatePrepayOrder(ctx context.Context, req *wallet
 	}
 
 	codeURL := fmt.Sprintf("%s/api/v1/public/mock-pay?out_trade_no=%s&amount=%d", m.BaseURL, req.OutTradeNo, req.AmountCents)
-	return &wallet.PrepayOrderResult{
+	return &PrepayOrderResult{
 		OutTradeNo: req.OutTradeNo,
 		CodeURL:    codeURL,
 		ExpiresAt:  time.Now().Add(15 * time.Minute),
 	}, nil
 }
 
-func (m *MockPaymentProvider) ParseAndVerifyWebhook(ctx context.Context, header http.Header, body []byte) (*wallet.WebhookPaymentResult, error) {
+func (m *MockPaymentProvider) ParseAndVerifyWebhook(ctx context.Context, header http.Header, body []byte) (*WebhookPaymentResult, error) {
 	var payload struct {
 		OutTradeNo      string `json:"out_trade_no"`
 		TransactionID   string `json:"transaction_id"`
@@ -65,7 +63,7 @@ func (m *MockPaymentProvider) ParseAndVerifyWebhook(ctx context.Context, header 
 		payload.TransactionID = fmt.Sprintf("mock_tx_%d", time.Now().UnixNano())
 	}
 
-	return &wallet.WebhookPaymentResult{
+	return &WebhookPaymentResult{
 		OutTradeNo:      payload.OutTradeNo,
 		TransactionID:   payload.TransactionID,
 		PaidAmountCents: payload.PaidAmountCents,
@@ -75,8 +73,8 @@ func (m *MockPaymentProvider) ParseAndVerifyWebhook(ctx context.Context, header 
 	}, nil
 }
 
-func (m *MockPaymentProvider) QueryOrder(ctx context.Context, outTradeNo string) (*wallet.PrepayOrderResult, error) {
-	return &wallet.PrepayOrderResult{
+func (m *MockPaymentProvider) QueryOrder(ctx context.Context, outTradeNo string) (*PrepayOrderResult, error) {
+	return &PrepayOrderResult{
 		OutTradeNo: outTradeNo,
 		CodeURL:    fmt.Sprintf("%s/api/v1/public/mock-pay?out_trade_no=%s", m.BaseURL, outTradeNo),
 		ExpiresAt:  time.Now().Add(15 * time.Minute),

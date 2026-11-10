@@ -1,9 +1,12 @@
 package payment
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -17,7 +20,7 @@ func TestMockPaymentProvider(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	req := &wallet.PrepayOrderRequest{
+	req := &PrepayOrderRequest{
 		TenantID:    "ten_test",
 		WalletID:    "wlt_test",
 		AmountCents: 5000, // 50.00 CNY
@@ -95,5 +98,100 @@ func TestWeChatAESGCMEncryptionAndDecryption(t *testing.T) {
 
 	if string(decrypted) != string(rawJSON) {
 		t.Fatalf("decrypted text mismatch:\nexpected: %s\ngot: %s", string(rawJSON), string(decrypted))
+	}
+}
+
+func TestPaymentHandlerFlow(t *testing.T) {
+	memWallet := wallet.NewMemoryService()
+	memWallet.RegisterWallet(&wallet.Wallet{
+		WalletID:       "wal_ten_flow",
+		TenantID:       "ten_flow",
+		Asset:          "CNY",
+		Status:         wallet.StatusActive,
+		Version:        1,
+		AvailableCache: 0,
+		HeldCache:      0,
+	})
+
+	mockProv := NewMockPaymentProvider("https://gate.aipmedia.cn")
+	handler := NewHandler(mockProv)
+	handler.BindServices(nil, memWallet)
+
+	// 1. Create TopUp Order via TenantSubresourceHandler
+	createPayload := []byte(`{"amount_cents": 10000, "channel": "mock", "description": "测试充值"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/tenants/ten_flow/topup-orders", bytes.NewReader(createPayload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.TenantSubresourceHandler().ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected status 201 Created, got %d, body: %s", w.Code, w.Body.String())
+	}
+
+	var createRes struct {
+		TopUpOrder *wallet.TopUpOrder `json:"topup_order"`
+		CodeURL    string             `json:"code_url"`
+		ExpiresAt  int64              `json:"expires_at"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &createRes); err != nil {
+		t.Fatalf("failed to decode create response: %v", err)
+	}
+	if createRes.TopUpOrder == nil || createRes.TopUpOrder.TopUpID == "" {
+		t.Fatalf("missing topup_id in response")
+	}
+	topupID := createRes.TopUpOrder.TopUpID
+	if createRes.TopUpOrder.Amount != 10000 {
+		t.Errorf("expected amount 10000, got %d", createRes.TopUpOrder.Amount)
+	}
+	if createRes.CodeURL == "" {
+		t.Errorf("expected non-empty CodeURL")
+	}
+
+	// 2. Query TopUp Order Status (pending)
+	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/tenants/ten_flow/topup-orders/"+topupID, nil)
+	getW := httptest.NewRecorder()
+	handler.TenantSubresourceHandler().ServeHTTP(getW, getReq)
+	if getW.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", getW.Code)
+	}
+
+	var getRes struct {
+		TopUpOrder *wallet.TopUpOrder `json:"topup_order"`
+	}
+	_ = json.Unmarshal(getW.Body.Bytes(), &getRes)
+	if getRes.TopUpOrder.Status != wallet.TopUpStatusPending {
+		t.Errorf("expected pending status, got %s", getRes.TopUpOrder.Status)
+	}
+
+	// 3. Confirm Mock Payment via MockConfirmHandler
+	confirmPayload := []byte(fmt.Sprintf(`{"out_trade_no": "%s"}`, topupID))
+	confReq := httptest.NewRequest(http.MethodPost, "/api/v1/public/mock-pay/confirm", bytes.NewReader(confirmPayload))
+	confReq.Header.Set("Content-Type", "application/json")
+	confW := httptest.NewRecorder()
+
+	handler.MockConfirmHandler().ServeHTTP(confW, confReq)
+	if confW.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on confirm, got %d, body: %s", confW.Code, confW.Body.String())
+	}
+
+	var confRes struct {
+		Success bool               `json:"success"`
+		Order   *wallet.TopUpOrder `json:"order"`
+	}
+	_ = json.Unmarshal(confW.Body.Bytes(), &confRes)
+	if !confRes.Success {
+		t.Errorf("expected success true")
+	}
+	if confRes.Order.Status != wallet.TopUpStatusConfirmed {
+		t.Errorf("expected status confirmed, got %s", confRes.Order.Status)
+	}
+
+	// 4. Verify wallet balance credited in Core
+	wlt, err := memWallet.GetWallet(context.Background(), "wal_ten_flow")
+	if err != nil {
+		t.Fatalf("failed to get wallet: %v", err)
+	}
+	if wlt.AvailableCache != 10000 {
+		t.Errorf("expected wallet balance 10000 cents, got %d", wlt.AvailableCache)
 	}
 }

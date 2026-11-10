@@ -18,8 +18,6 @@ import (
 	"io"
 	"net/http"
 	"time"
-
-	"github.com/open-agentpay/agent-core-sdk/gateway/wallet"
 )
 
 // WeChatPayConfig holds credentials for WeChat Pay V3.
@@ -33,7 +31,7 @@ type WeChatPayConfig struct {
 	HTTPClient    *http.Client
 }
 
-// WeChatPayV3Provider implements wallet.PaymentProvider for WeChat Pay Native V3.
+// WeChatPayV3Provider implements PaymentProvider for WeChat Pay Native V3.
 type WeChatPayV3Provider struct {
 	cfg        WeChatPayConfig
 	httpClient *http.Client
@@ -82,7 +80,7 @@ func (w *WeChatPayV3Provider) Name() string {
 }
 
 // CreatePrepayOrder calls WeChat Pay V3 Native transactions endpoint.
-func (w *WeChatPayV3Provider) CreatePrepayOrder(ctx context.Context, req *wallet.PrepayOrderRequest) (*wallet.PrepayOrderResult, error) {
+func (w *WeChatPayV3Provider) CreatePrepayOrder(ctx context.Context, req *PrepayOrderRequest) (*PrepayOrderResult, error) {
 	if req.AmountCents <= 0 {
 		return nil, errors.New("amount must be greater than 0 cents")
 	}
@@ -153,7 +151,7 @@ func (w *WeChatPayV3Provider) CreatePrepayOrder(ctx context.Context, req *wallet
 		return nil, errors.New("wechat prepay response did not contain code_url")
 	}
 
-	return &wallet.PrepayOrderResult{
+	return &PrepayOrderResult{
 		OutTradeNo: req.OutTradeNo,
 		CodeURL:    res.CodeURL,
 		ExpiresAt:  time.Now().Add(15 * time.Minute),
@@ -161,7 +159,7 @@ func (w *WeChatPayV3Provider) CreatePrepayOrder(ctx context.Context, req *wallet
 }
 
 // ParseAndVerifyWebhook verifies and decrypts WeChat Pay V3 webhook notification.
-func (w *WeChatPayV3Provider) ParseAndVerifyWebhook(ctx context.Context, header http.Header, body []byte) (*wallet.WebhookPaymentResult, error) {
+func (w *WeChatPayV3Provider) ParseAndVerifyWebhook(ctx context.Context, header http.Header, body []byte) (*WebhookPaymentResult, error) {
 	var notify struct {
 		ID           string `json:"id"`
 		CreateTime   string `json:"create_time"`
@@ -216,7 +214,7 @@ func (w *WeChatPayV3Provider) ParseAndVerifyWebhook(ctx context.Context, header 
 		paidAt = time.Now()
 	}
 
-	return &wallet.WebhookPaymentResult{
+	return &WebhookPaymentResult{
 		OutTradeNo:      tx.OutTradeNo,
 		TransactionID:   tx.TransactionID,
 		PaidAmountCents: tx.Amount.Total,
@@ -226,7 +224,7 @@ func (w *WeChatPayV3Provider) ParseAndVerifyWebhook(ctx context.Context, header 
 	}, nil
 }
 
-func (w *WeChatPayV3Provider) QueryOrder(ctx context.Context, outTradeNo string) (*wallet.PrepayOrderResult, error) {
+func (w *WeChatPayV3Provider) QueryOrder(ctx context.Context, outTradeNo string) (*PrepayOrderResult, error) {
 	return nil, errors.New("query order not implemented")
 }
 
