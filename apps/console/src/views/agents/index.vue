@@ -181,13 +181,12 @@ watch(
   }
 );
 
-onMounted(() => {
-  loadAgents().then(() => {
-    const claimKeyQuery = route.query.claim_key as string;
-    if (claimKeyQuery && claimKeyQuery.startsWith('apk_live_guest_')) {
-      openClaimTrialDialog(claimKeyQuery);
-    }
-  });
+onMounted(async () => {
+  await Promise.all([loadAgents(), tenantStore.loadProjects()]);
+  const claimKeyQuery = route.query.claim_key as string;
+  if (claimKeyQuery && claimKeyQuery.startsWith('apk_live_guest_')) {
+    openClaimTrialDialog(claimKeyQuery);
+  }
 });
 
 // Filtered agents
@@ -558,11 +557,15 @@ const claimLoading = ref(false);
 
 function openClaimTrialDialog(prefilledKey?: string) {
   claimKeyInput.value = prefilledKey || '';
-  if (tenantStore.availableProjects.length > 0 && !claimProjectId.value) {
+  if (tenantStore.availableProjects.length > 0) {
     claimProjectId.value = tenantStore.availableProjects[0].project_id;
+  } else {
+    claimProjectId.value = '';
   }
-  if (agents.value.length > 0 && !claimAgentId.value) {
+  if (agents.value.length > 0) {
     claimAgentId.value = agents.value[0].agent_id;
+  } else {
+    claimAgentId.value = '';
   }
   claimTrialDialogVisible.value = true;
 }
@@ -595,6 +598,7 @@ async function handleClaimTrialKey() {
     if (route.query.claim_key) {
       router.replace({ path: route.path, query: { ...route.query, claim_key: undefined } });
     }
+    await tenantStore.loadProjects();
     await loadAgents();
   } catch (err: unknown) {
     const msg = err instanceof Error ? t(err.message) : t('认领转正失败');
@@ -1378,10 +1382,15 @@ async function handleClaimTrialKey() {
           <el-form-item :label="$t('归属业务项目')">
             <el-select
               v-model="claimProjectId"
-              :placeholder="$t('请选择项目（默认分配至首个有效项目）')"
+              :placeholder="tenantStore.availableProjects.length === 0 ? $t('⚡ 自动创建「默认业务项目」（新租户免配置）') : $t('请选择项目（默认分配至首个有效项目）')"
               style="width: 100%"
               clearable
             >
+              <el-option
+                v-if="tenantStore.availableProjects.length === 0"
+                :label="$t('⚡ 自动创建「默认业务项目」（无需手动新建）')"
+                value=""
+              />
               <el-option
                 v-for="p in tenantStore.availableProjects"
                 :key="p.project_id"
@@ -1394,10 +1403,15 @@ async function handleClaimTrialKey() {
           <el-form-item :label="$t('绑定 Agent 实体')">
             <el-select
               v-model="claimAgentId"
-              :placeholder="$t('请选择绑定的 Agent（选填）')"
+              :placeholder="agents.length === 0 ? $t('⚡ 自动创建「默认智能体」（新租户免配置）') : $t('请选择绑定的 Agent（选填）')"
               style="width: 100%"
               clearable
             >
+              <el-option
+                v-if="agents.length === 0"
+                :label="$t('⚡ 自动创建「默认智能体」（无需手动新建）')"
+                value=""
+              />
               <el-option
                 v-for="a in agents"
                 :key="a.agent_id"
@@ -1406,6 +1420,13 @@ async function handleClaimTrialKey() {
               />
             </el-select>
           </el-form-item>
+
+          <div
+            v-if="tenantStore.availableProjects.length === 0 && agents.length === 0"
+            style="margin-top: 14px; padding: 12px 14px; background: rgba(59, 130, 246, 0.08); border-radius: 8px; font-size: 13px; color: #2563eb; line-height: 1.5; border: 1px solid rgba(59, 130, 246, 0.2);"
+          >
+            💡 <strong>新用户免配置保障</strong>：检测到当前租户尚未创建项目与 Agent。无需关闭弹窗或手动配置，直接点击下方<strong>【确认认领并转正】</strong>，系统将<strong>自动为您创建「默认业务项目」与「默认智能体」</strong>并完成无缝绑定，开箱即用！
+          </div>
         </el-form>
       </div>
 
