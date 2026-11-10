@@ -267,7 +267,7 @@ CREATE TABLE IF NOT EXISTS ap_topup_order (
     topup_id VARCHAR(64) PRIMARY KEY,
     wallet_id VARCHAR(64) NOT NULL REFERENCES ap_wallet(wallet_id) ON DELETE RESTRICT,
     tenant_id VARCHAR(64) NOT NULL REFERENCES ap_tenant(tenant_id) ON DELETE RESTRICT,
-    channel VARCHAR(32) NOT NULL CHECK (channel IN ('admin_grant', 'fiat')),
+    channel VARCHAR(32) NOT NULL CHECK (channel IN ('admin_grant', 'fiat', 'wechat_pay', 'alipay', 'mock')),
     amount BIGINT NOT NULL CHECK (amount > 0),
     asset VARCHAR(16) NOT NULL DEFAULT 'CNY',
     payment_currency VARCHAR(16) NULL,

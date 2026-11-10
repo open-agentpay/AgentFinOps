@@ -15,12 +15,14 @@ import (
 
 	"github.com/agentfinops/agentfinops-gateway/internal/enterprise/department"
 	"github.com/agentfinops/agentfinops-gateway/internal/enterprise/quota"
+	"github.com/agentfinops/agentfinops-gateway/internal/payment"
 	"github.com/open-agentpay/agent-core-sdk/gateway/agent"
 	"github.com/open-agentpay/agent-core-sdk/gateway/config"
 	"github.com/open-agentpay/agent-core-sdk/gateway/logger"
 	"github.com/open-agentpay/agent-core-sdk/gateway/metrics"
 	"github.com/open-agentpay/agent-core-sdk/gateway/rcu"
 	"github.com/open-agentpay/agent-core-sdk/gateway/server"
+	"github.com/open-agentpay/agent-core-sdk/gateway/wallet"
 )
 
 func main() {
@@ -119,12 +121,43 @@ func main() {
 	cascadeRecorder := quota.NewCascadeSpendRecorder(projStore, deptSvc, budgetTracker)
 	deptHandler := department.NewHTTPHandler(deptSvc)
 
-	// 5. Initialize metrics and HTTP server from agent-core-sdk
+	// 5. Initialize fiat payment provider (WeChat Pay V3 or Sandbox Mock Provider)
+	var payProvider wallet.PaymentProvider
+	wxAppID := os.Getenv("WECHAT_PAY_APPID")
+	wxMchID := os.Getenv("WECHAT_PAY_MCHID")
+	wxSerial := os.Getenv("WECHAT_PAY_SERIAL_NO")
+	wxKey := os.Getenv("WECHAT_PAY_API_V3_KEY")
+	wxPrivPath := os.Getenv("WECHAT_PAY_PRIVATE_KEY_PATH")
+	wxNotify := os.Getenv("WECHAT_PAY_NOTIFY_URL")
+
+	if wxAppID != "" && wxMchID != "" && wxSerial != "" && wxKey != "" && wxPrivPath != "" {
+		if privBytes, err := os.ReadFile(wxPrivPath); err == nil {
+			if wxProv, err := payment.NewWeChatPayV3Provider(payment.WeChatPayConfig{
+				AppID:       wxAppID,
+				MchID:       wxMchID,
+				MchSerialNo: wxSerial,
+				APIv3Key:    wxKey,
+				NotifyURL:   wxNotify,
+			}, privBytes); err == nil {
+				payProvider = wxProv
+				log.Info("initialized WeChat Pay V3 Native payment provider", slog.String("mch_id", wxMchID))
+			} else {
+				log.Warn("failed to initialize WeChat Pay V3 provider, falling back to mock", slog.Any("error", err))
+			}
+		}
+	}
+	if payProvider == nil {
+		payProvider = payment.NewMockPaymentProvider("https://gate.aipmedia.cn")
+		log.Info("initialized Sandbox Mock Payment Provider (Zero-Friction Dev/Demo Mode)")
+	}
+
+	// 6. Initialize metrics and HTTP server from agent-core-sdk
 	m := metrics.New()
 	srv, err := server.New(cfg, rcuMgr, m,
 		server.WithPolicyEvaluator(cascadeEnforcer),
 		server.WithSpendRecorder(cascadeRecorder),
 		server.WithTenantSubresource("departments", deptHandler),
+		server.WithPaymentProvider(payProvider),
 	)
 	if err != nil {
 		log.Error("failed to create gateway server", slog.Any("error", err))

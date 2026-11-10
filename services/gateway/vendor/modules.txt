@@ -16,6 +16,7 @@ github.com/open-agentpay/agent-core-sdk/gateway/admin
 github.com/open-agentpay/agent-core-sdk/gateway/agent
 github.com/open-agentpay/agent-core-sdk/gateway/auth
 github.com/open-agentpay/agent-core-sdk/gateway/config
+github.com/open-agentpay/agent-core-sdk/gateway/i18n
 github.com/open-agentpay/agent-core-sdk/gateway/idempotency
 github.com/open-agentpay/agent-core-sdk/gateway/logger
 github.com/open-agentpay/agent-core-sdk/gateway/mcp
