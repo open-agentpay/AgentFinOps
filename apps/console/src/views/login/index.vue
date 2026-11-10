@@ -419,7 +419,7 @@ async function handleQuickRoleLogin(role: UserRole) {
                     />
                   </el-form-item>
 
-                  <el-form-item :label="$t('结算本位法币 (公有云节点 Currency)')" prop="currency">
+                  <el-form-item :label="$t('结算本位币 (公有云节点 Currency)')" prop="currency">
                     <el-select
                       v-model="registerForm.currency"
                       size="large"

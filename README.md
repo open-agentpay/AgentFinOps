@@ -8,7 +8,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.21%2B-00ADD8?style=flat&logo=go)](https://golang.org)
 [![Vue 3](https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat&logo=vue.js)](https://vuejs.org)
 [![Element Plus](https://img.shields.io/badge/Element--Plus-2.9-409EFF?style=flat)](https://element-plus.org)
-[![Domestic Compliance](https://img.shields.io/badge/国内合规-100%25法币微单位-success.svg)](#-合规法币与企业财务闭环)
+[![Domestic Compliance](https://img.shields.io/badge/国内合规-100%25微单位资金-success.svg)](#-国内合规资金与企业财务闭环)
 
 **[在线官方文档](https://aipmedia.cn/docs/)** | **[管理控制台](https://console.aipmedia.cn)** | **[核心 SDK 仓库](https://github.com/open-agentpay/agent-core-sdk)** | **[English Readme](README_en.md)**
 
@@ -59,7 +59,7 @@
 - **组织拓扑切分**：**租户（企业） $\to$ 事业群/部门 $\to$ 项目组 $\to$ 具体 Agent**。
 - **级联硬顶熔断**：任何一笔请求扣款，必须同时满足 Agent 单笔上限、项目月度预算、祖先各级部门月度总额及企业总账户余额，任一层超限立即精准阻断。
 
-### 3. 国内合规法币与企业财务闭环
+### 3. 国内合规资金与企业财务闭环
 - **无加密货币、零海外牌照风险**：资金进出国内合规对公账户与企业收银台，换算为内部不可跨租户互转、不可提现的虚拟账本微单位，纯属于算力预售，符合国内合规监管。
 - **6 位微单位严格避免浮点数**：入账边界严格执行 $\text{amount\_base\_units} = \text{payment\_minor\_amount} \times 10,000$（1 元 = 1,000,000 微单位），数据库与网关底层全程整型计数，严禁浮点数。
 - **双层幂等防重复入账**：`external_ref` 与流水唯一索引组合，防御第三方支付渠道重试 Webhook 造成的重复入账。
@@ -147,7 +147,7 @@ print("推理结果:", response.json())
 ## 🗺️ 官方技术演进路线图
 
 本项目严格遵循 [《AgentPay 核心任务全景规划与技术演进路线图 (Master Roadmap) v2.0.0》](https://aipmedia.cn/docs/roadmap/) 演进：
-- **Phase 1 (当前主线)**：树状部门组织与级联配额引擎、飞书/企微人在回路 (HITL) 审批、国内合规法币充值、MCP 协议支付中间件、Langfuse 深度共生。
+- **Phase 1 (当前主线)**：树状部门组织与级联配额引擎、飞书/企微人在回路 (HITL) 审批、国内合规在线充值、MCP 协议支付中间件、Langfuse 深度共生。
 - **Phase 2 (重要演进)**：毫秒级 Token 流式微计费与批量落盘、Java / Spring Boot Starter SDK (`@AgentPayGuard`)。
 - **Phase 3 (硬件与集群)**：进程外隔离 Sidecar 守护进程、云端 KMS 与国密硬件 HSM 签名、分布式网关集群与五重对账平账调度器。
 

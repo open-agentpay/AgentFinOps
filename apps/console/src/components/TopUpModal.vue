@@ -193,7 +193,7 @@ onUnmounted(() => {
 <template>
   <el-dialog
     v-model="visible"
-    :title="$t('⚡ 组织账户法币在线充值')"
+    :title="$t('⚡ 组织账户在线充值')"
     width="540px"
     destroy-on-close
     :close-on-click-modal="false"

@@ -95,7 +95,7 @@ export default withMermaid(
               { text: '企业 AI 防火墙战术框架', link: '/finops/' },
               { text: '树状组织多层配额模型', link: '/finops/budget-control' },
               { text: '内部虚拟钱包与只追加账本', link: '/finops/wallet-ledger' },
-              { text: '合规法币充值与防“二清”', link: '/finops/fiat-topup' },
+              { text: '合规在线充值与防“二清”', link: '/finops/fiat-topup' },
             ],
           },
         ],

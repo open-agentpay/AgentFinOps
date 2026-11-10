@@ -64,7 +64,7 @@
 - [企业级 AI 行为审计与资金防火墙战术框架](/finops/)
 - [树状组织多层配额模型与预算控制体系](/finops/budget-control)
 - [内部虚拟钱包与只追加不可变账本](/finops/wallet-ledger)
-- [国内合规法币充值与防“二清”机制](/finops/fiat-topup)
+- [国内合规在线充值与防“二清”机制](/finops/fiat-topup)
 
 ### 3. 行为安全与不可篡改审计
 - [Agent 身份黑匣子与不可篡改行为审计流](/security-hitl/agent-audit)

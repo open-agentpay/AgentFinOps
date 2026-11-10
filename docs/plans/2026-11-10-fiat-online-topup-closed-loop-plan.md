@@ -1,8 +1,8 @@
-# 控制台法币在线充值闭环 (Fiat Online Top-up Closed Loop) 详细实施计划
+# 控制台在线充值闭环 (Online Top-up Closed Loop) 详细实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为 AgentFinOps 打造端到端生产级法币在线充值闭环，支持租户管理员在控制台选择充值面额（微信支付 Native 扫码付 / 本地沙箱 Mock），生成动态支付二维码，扫码支付后异步 Webhook 安全验签并原子入账至企业账本，所有法币资金与计算严格以“分（Cents）”为整数单位，实现无需人工干预的自助充值与秒级到账。
+**Goal:** 为 AgentFinOps 打造端到端生产级在线充值闭环，支持租户管理员在控制台选择充值面额（微信支付 Native 扫码付 / 本地沙箱 Mock），生成动态支付二维码，扫码支付后异步 Webhook 安全验签并原子入账至企业账本，所有充值资金与计算严格以“分（Cents）”为整数单位，实现无需人工干预的自助充值与秒级到账。
 
 **Architecture:** 
 1. **Core 抽象与业务解耦 (SPI Pattern)**：
@@ -17,7 +17,7 @@
 
 **Tech Stack:** Go 1.22+, PostgreSQL 15, Vue 3, TypeScript, Element Plus, Pinia.
 
-**Spec:** `docs/roadmap/index.md` (2.2 国内合规法币充值体系), `infra/postgres/schema.sql` (ap_topup_order & ap_ledger_entry).
+**Spec:** `docs/roadmap/index.md` (2.2 国内合规在线充值体系), `infra/postgres/schema.sql` (ap_topup_order & ap_ledger_entry).
 
 ## Global Constraints
 

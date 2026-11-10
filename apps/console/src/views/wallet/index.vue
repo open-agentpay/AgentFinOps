@@ -869,7 +869,7 @@ function getTopupStatusType(status: TopUpStatus) {
               <el-select v-model="topupChannelFilter" :placeholder="$t('充值渠道')" style="width: 160px">
                 <el-option :label="$t('全部渠道')" value="all" />
                 <el-option :label="$t('管理员发放 (admin_grant)')" value="admin_grant" />
-                <el-option :label="$t('对公转账/法币网关 (fiat)')" value="fiat" />
+                <el-option :label="$t('对公转账/在线充值 (fiat)')" value="fiat" />
               </el-select>
 
               <el-select v-model="topupStatusFilter" :placeholder="$t('订单状态')" style="width: 140px">
@@ -898,7 +898,7 @@ function getTopupStatusType(status: TopUpStatus) {
                   {{ $t('管理员发放') }}
                 </el-tag>
                 <el-tag v-else type="info" size="small">
-                  {{ $t('对公转账/法币渠道') }}
+                  {{ $t('对公转账/在线充值渠道') }}
                 </el-tag>
               </template>
             </el-table-column>
