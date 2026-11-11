@@ -76,6 +76,7 @@
 - [动态路由策略发布与 RCU 原子生效规范](/protocol/config-publishing)
 
 ### 5. 开放生态与开发者接入
+- [AI Harness 与多框架集成指南 (LangChain / OpenAI / CrewAI)](/ecosystem/harness-integration)
 - [MCP (Model Context Protocol) 协议原生支付中间件与防火墙](/ecosystem/mcp-plugin)
 - [与 Langfuse 深度共生：打造企业级 AI 运维双子星](/ecosystem/langfuse)
 - [客户端 SDK 接入指南 (Python & TypeScript)](/guide/sdk_quickstart)

@@ -64,7 +64,7 @@ export default withMermaid(
         { text: 'FinOps 成本治理', link: '/finops/' },
         { text: '行为安全与审计', link: '/security-hitl/agent-audit' },
         { text: '微支付协议', link: '/protocol/state-machine' },
-        { text: '生态联动', link: '/ecosystem/mcp-plugin' },
+        { text: '生态联动', link: '/ecosystem/harness-integration' },
         { text: '快速开始', link: '/guide/sdk_quickstart' },
         { text: '管理控制台', link: 'https://console.aipmedia.cn' },
       ],
@@ -122,6 +122,7 @@ export default withMermaid(
           {
             text: '开放生态与全链路联动',
             items: [
+              { text: 'AI Harness 框架集成 (LangChain / OpenAI / CrewAI)', link: '/ecosystem/harness-integration' },
               { text: 'MCP 协议原生支付中间件', link: '/ecosystem/mcp-plugin' },
               { text: '与 Langfuse 深度共生观测', link: '/ecosystem/langfuse' },
             ],
