@@ -26,6 +26,7 @@ const selectedProject = ref<string>('all');
 const selectedAgent = ref<string>('all');
 const selectedPaymentMethod = ref<string>('all');
 const selectedDisplayStatus = ref<string>('all');
+const selectedFramework = ref<string>('all');
 const searchRouteOrReq = ref<string>('');
 const dateRange = ref<[Date, Date] | null>(null);
 
@@ -137,6 +138,47 @@ function getSubsystemTagType(_subsystem: 'intent' | 'settlement' | 'fulfillment'
   return 'info';
 }
 
+// Framework tag styling & naming
+function getFramework(row: PaymentAuditRecord | null | undefined): string {
+  if (!row) return '';
+  if (row.framework) return row.framework.toLowerCase();
+  const metaFw = row.metadata?.framework || row.metadata?.agent_framework;
+  if (metaFw) return String(metaFw).toLowerCase();
+  return '';
+}
+
+function getFrameworkTagType(fw: string): 'success' | 'warning' | 'danger' | 'info' | 'primary' {
+  switch (fw) {
+    case 'langchain':
+      return 'success';
+    case 'openai':
+      return 'primary';
+    case 'crewai':
+      return 'warning';
+    case 'mcp':
+      return 'info';
+    default:
+      return 'info';
+  }
+}
+
+function formatFrameworkName(fw: string): string {
+  switch (fw) {
+    case 'langchain':
+      return 'LangChain';
+    case 'openai':
+      return 'OpenAI Agents';
+    case 'crewai':
+      return 'CrewAI';
+    case 'mcp':
+      return 'MCP Protocol';
+    case 'http':
+      return 'HTTP 402 原生';
+    default:
+      return fw ? fw.toUpperCase() : '';
+  }
+}
+
 // Copy helper
 function copyToClipboard(text: string) {
   navigator.clipboard.writeText(text);
@@ -160,6 +202,7 @@ async function loadPayments() {
     if (selectedAgent.value !== 'all') query.agent_id = selectedAgent.value;
     if (selectedPaymentMethod.value !== 'all') query.payment_method = selectedPaymentMethod.value;
     if (selectedDisplayStatus.value !== 'all') query.display_status = selectedDisplayStatus.value;
+    if (selectedFramework.value !== 'all') query.framework = selectedFramework.value;
     if (searchRouteOrReq.value.trim()) query.route_id = searchRouteOrReq.value.trim();
 
     if (dateRange.value && dateRange.value.length === 2) {
@@ -195,6 +238,7 @@ function resetFilters() {
   selectedAgent.value = 'all';
   selectedPaymentMethod.value = 'all';
   selectedDisplayStatus.value = 'all';
+  selectedFramework.value = 'all';
   searchRouteOrReq.value = '';
   dateRange.value = null;
   currentPage.value = 1;
@@ -338,6 +382,17 @@ watch(
           </el-select>
         </el-form-item>
 
+        <el-form-item :label="$t('AI 框架 (Harness)')">
+          <el-select v-model="selectedFramework" :placeholder="$t('全部框架')" style="width: 170px">
+            <el-option :label="$t('全部框架')" value="all" />
+            <el-option label="LangChain" value="langchain" />
+            <el-option label="OpenAI Agents" value="openai" />
+            <el-option label="CrewAI" value="crewai" />
+            <el-option label="MCP Protocol" value="mcp" />
+            <el-option :label="$t('HTTP 402 原生')" value="http" />
+          </el-select>
+        </el-form-item>
+
         <el-form-item :label="$t('支付方式')">
           <el-select v-model="selectedPaymentMethod" :placeholder="$t('全部方式')" style="width: 140px">
             <el-option :label="$t('全部方式')" value="all" />
@@ -412,15 +467,22 @@ watch(
           </template>
         </el-table-column>
 
-        <!-- Agent Identification -->
-        <el-table-column :label="$t('所属 Agent')" min-width="160">
+        <!-- Agent Identification & Harness Framework -->
+        <el-table-column :label="$t('所属 Agent / 框架')" min-width="180">
           <template #default="{ row }">
-            <div class="agent-cell" v-if="row.agent_id">
-              <el-tag size="small" effect="light" class="agent-tag">
-                <el-icon><Cpu /></el-icon> {{ row.agent_id }}
-              </el-tag>
+            <div class="agent-cell">
+              <div v-if="row.agent_id" class="agent-name-line">
+                <el-tag size="small" effect="light" class="agent-tag">
+                  <el-icon><Cpu /></el-icon> {{ row.agent_id }}
+                </el-tag>
+              </div>
+              <span v-else class="text-muted">{{ $t('租户直接调用') }}</span>
+              <div class="framework-line" v-if="getFramework(row)">
+                <el-tag size="small" :type="getFrameworkTagType(getFramework(row))" effect="plain" class="framework-tag">
+                  {{ formatFrameworkName(getFramework(row)) }}
+                </el-tag>
+              </div>
             </div>
-            <span v-else class="text-muted">{{ $t('租户直接调用') }}</span>
           </template>
         </el-table-column>
 
@@ -537,6 +599,34 @@ watch(
             :closable="false"
             class="status-alert"
           />
+
+          <!-- Stage 0: AI Harness & Agent Provenance -->
+          <div class="stage-section" v-if="getFramework(activeRecord) || activeRecord.session_id || activeRecord.environment">
+            <div class="stage-header">
+              <div class="stage-title">
+                <el-icon class="icon"><Connection /></el-icon>
+                <span>{{ $t('0. AI Harness 运行上下文 (Framework Provenance)') }}</span>
+              </div>
+              <el-tag v-if="getFramework(activeRecord)" size="small" :type="getFrameworkTagType(getFramework(activeRecord))">
+                {{ formatFrameworkName(getFramework(activeRecord)) }}
+              </el-tag>
+            </div>
+            <div class="stage-body">
+              <el-descriptions :column="2" border size="small">
+                <el-descriptions-item :label="$t('接入框架 (Framework)')">
+                  <el-tag size="small" :type="getFrameworkTagType(getFramework(activeRecord))" effect="plain">
+                    {{ formatFrameworkName(getFramework(activeRecord)) || $t('标准 HTTP 402') }}
+                  </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item :label="$t('运行环境 (Environment)')">
+                  <span class="mono">{{ activeRecord.environment || 'production' }}</span>
+                </el-descriptions-item>
+                <el-descriptions-item :label="$t('推理会话 ID (Session ID)')" :span="2" v-if="activeRecord.session_id">
+                  <span class="mono">{{ activeRecord.session_id }}</span>
+                </el-descriptions-item>
+              </el-descriptions>
+            </div>
+          </div>
 
           <!-- Stage 1: Payment Intent -->
           <div class="stage-section">
@@ -906,6 +996,14 @@ watch(
 
 .status-alert {
   margin-bottom: 8px;
+}
+
+.framework-line {
+  margin-top: 4px;
+}
+
+.framework-tag {
+  font-size: 11px;
 }
 
 .stage-section {

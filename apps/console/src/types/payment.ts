@@ -123,6 +123,12 @@ export interface PaymentAuditRecord {
   settlement_status: SettlementStatus;
   fulfillment_status: FulfillmentStatus;
 
+  // Harness & Context Provenance
+  framework?: string;
+  session_id?: string;
+  environment?: string;
+  metadata?: Record<string, any>;
+
   // Linked Entities
   intent?: PaymentIntent;
   settlement?: SettlementRecord;
@@ -141,6 +147,7 @@ export interface PaymentAuditQuery {
   payment_method?: string;
   display_status?: string;
   intent_status?: string;
+  framework?: string;
   start_time?: string;
   end_time?: string;
   limit?: number;

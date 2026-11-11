@@ -587,6 +587,9 @@ export const MOCK_PAYMENTS: Record<string, import('@/types/payment').PaymentAudi
       intent_status: 'completed',
       settlement_status: 'confirmed',
       fulfillment_status: 'succeeded',
+      framework: 'langchain',
+      session_id: 'sess_market_research_01',
+      environment: 'production',
       intent: {
         intent_id: 'pi_req_spider_9a8b7c',
         tenant_id: 'ten_9a8b7c6d5e',
@@ -786,6 +789,9 @@ export const MOCK_PAYMENTS: Record<string, import('@/types/payment').PaymentAudi
       intent_status: 'completed',
       settlement_status: 'confirmed',
       fulfillment_status: 'succeeded',
+      framework: 'langchain',
+      session_id: 'sess_market_research_01',
+      environment: 'production',
       intent: {
         intent_id: 'pi_req_domestic_feed_01',
         tenant_id: 'ten_9a8b7c6d5e',

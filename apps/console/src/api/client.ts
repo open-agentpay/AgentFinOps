@@ -1070,6 +1070,7 @@ export const paymentApi = {
       if (query?.payment_method && query.payment_method !== 'all') params.payment_method = query.payment_method;
       if (query?.display_status && query.display_status !== 'all') params.display_status = query.display_status;
       if (query?.intent_status && query.intent_status !== 'all') params.intent_status = query.intent_status;
+      if (query?.framework && query.framework !== 'all') params.framework = query.framework;
       if (query?.start_time) params.start_time = query.start_time;
       if (query?.end_time) params.end_time = query.end_time;
       if (query?.limit !== undefined) params.limit = query.limit;
@@ -1095,6 +1096,10 @@ export const paymentApi = {
       }
       if (query?.display_status && query.display_status !== 'all') {
         list = list.filter((p) => p.display_status === query.display_status);
+      }
+      if (query?.framework && query.framework !== 'all') {
+        const fw = query.framework.toLowerCase();
+        list = list.filter((p) => (p.framework || p.metadata?.framework || '').toLowerCase() === fw);
       }
       if (query?.start_time) {
         const start = new Date(query.start_time).getTime();
