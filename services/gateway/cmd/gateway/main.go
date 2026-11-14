@@ -120,7 +120,7 @@ func main() {
 	cascadeRecorder := quota.NewCascadeSpendRecorder(projStore, deptSvc, budgetTracker)
 	deptHandler := department.NewHTTPHandler(deptSvc)
 
-	// 5. Initialize fiat payment provider (WeChat Pay V3 or Sandbox Mock Provider)
+	// 5. Initialize payment provider (WeChat Pay V3 or Sandbox Mock Provider)
 	var payProvider payment.PaymentProvider
 	wxAppID := os.Getenv("WECHAT_PAY_APPID")
 	wxMchID := os.Getenv("WECHAT_PAY_MCHID")
@@ -129,19 +129,37 @@ func main() {
 	wxPrivPath := os.Getenv("WECHAT_PAY_PRIVATE_KEY_PATH")
 	wxNotify := os.Getenv("WECHAT_PAY_NOTIFY_URL")
 
-	if wxAppID != "" && wxMchID != "" && wxSerial != "" && wxKey != "" && wxPrivPath != "" {
-		if privBytes, err := os.ReadFile(wxPrivPath); err == nil {
-			if wxProv, err := payment.NewWeChatPayV3Provider(payment.WeChatPayConfig{
-				AppID:       wxAppID,
-				MchID:       wxMchID,
-				MchSerialNo: wxSerial,
-				APIv3Key:    wxKey,
-				NotifyURL:   wxNotify,
-			}, privBytes); err == nil {
-				payProvider = wxProv
-				log.Info("initialized WeChat Pay V3 Native payment provider", slog.String("mch_id", wxMchID))
+	hasAnyWxConfig := wxAppID != "" || wxMchID != "" || wxSerial != "" || wxKey != "" || wxPrivPath != ""
+	if hasAnyWxConfig {
+		if wxAppID == "" || wxMchID == "" || wxSerial == "" || wxKey == "" || wxPrivPath == "" {
+			log.Warn("incomplete WeChat Pay configuration (missing required env vars), falling back to mock",
+				slog.Bool("has_appid", wxAppID != ""),
+				slog.Bool("has_mchid", wxMchID != ""),
+				slog.Bool("has_serial", wxSerial != ""),
+				slog.Bool("has_key", wxKey != ""),
+				slog.Bool("has_privpath", wxPrivPath != ""),
+			)
+		} else {
+			privBytes, err := os.ReadFile(wxPrivPath)
+			if err != nil {
+				log.Warn("failed to read WeChat Pay private key file, falling back to mock",
+					slog.String("path", wxPrivPath),
+					slog.Any("error", err),
+				)
 			} else {
-				log.Warn("failed to initialize WeChat Pay V3 provider, falling back to mock", slog.Any("error", err))
+				wxProv, err := payment.NewWeChatPayV3Provider(payment.WeChatPayConfig{
+					AppID:       wxAppID,
+					MchID:       wxMchID,
+					MchSerialNo: wxSerial,
+					APIv3Key:    wxKey,
+					NotifyURL:   wxNotify,
+				}, privBytes)
+				if err != nil {
+					log.Warn("failed to initialize WeChat Pay V3 provider, falling back to mock", slog.Any("error", err))
+				} else {
+					payProvider = wxProv
+					log.Info("initialized WeChat Pay V3 Native payment provider", slog.String("mch_id", wxMchID))
+				}
 			}
 		}
 	}

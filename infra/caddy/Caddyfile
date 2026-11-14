@@ -28,9 +28,25 @@
 {$DOMAIN_CONSOLE:console.aipmedia.cn} {
     encode zstd gzip
 
-    reverse_proxy console:80 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
+    # Forward API requests directly to Core Go Gateway
+    handle /api/* {
+        reverse_proxy gateway:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Health check proxy
+    handle /healthz {
+        reverse_proxy gateway:8000
+    }
+
+    # Forward static web assets & SPA routes to Vue 3 Console
+    handle {
+        reverse_proxy console:80 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
     }
 }
 

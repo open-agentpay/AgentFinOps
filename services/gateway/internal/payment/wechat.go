@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -127,6 +128,11 @@ func (w *WeChatPayV3Provider) CreatePrepayOrder(ctx context.Context, req *Prepay
 
 	resp, err := w.httpClient.Do(httpReq)
 	if err != nil {
+		slog.Error("wechat prepay HTTP request network failure",
+			slog.String("out_trade_no", req.OutTradeNo),
+			slog.Int64("amount_cents", req.AmountCents),
+			slog.Any("error", err),
+		)
 		return nil, fmt.Errorf("wechat prepay request failed: %w", err)
 	}
 	defer resp.Body.Close()
@@ -137,6 +143,11 @@ func (w *WeChatPayV3Provider) CreatePrepayOrder(ctx context.Context, req *Prepay
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		slog.Error("wechat pay official API returned error",
+			slog.String("out_trade_no", req.OutTradeNo),
+			slog.Int("http_status", resp.StatusCode),
+			slog.String("response_body", string(respBytes)),
+		)
 		return nil, fmt.Errorf("wechat prepay returned status %d: %s", resp.StatusCode, string(respBytes))
 	}
 
@@ -144,12 +155,27 @@ func (w *WeChatPayV3Provider) CreatePrepayOrder(ctx context.Context, req *Prepay
 		CodeURL string `json:"code_url"`
 	}
 	if err := json.Unmarshal(respBytes, &res); err != nil {
+		slog.Error("failed to parse wechat prepay response JSON",
+			slog.String("out_trade_no", req.OutTradeNo),
+			slog.String("response_body", string(respBytes)),
+			slog.Any("error", err),
+		)
 		return nil, fmt.Errorf("failed to parse wechat prepay response: %w", err)
 	}
 
 	if res.CodeURL == "" {
+		slog.Error("wechat prepay response missing code_url",
+			slog.String("out_trade_no", req.OutTradeNo),
+			slog.String("response_body", string(respBytes)),
+		)
 		return nil, errors.New("wechat prepay response did not contain code_url")
 	}
+
+	slog.Info("wechat prepay order created successfully",
+		slog.String("out_trade_no", req.OutTradeNo),
+		slog.Int64("amount_cents", req.AmountCents),
+		slog.String("code_url", res.CodeURL),
+	)
 
 	return &PrepayOrderResult{
 		OutTradeNo: req.OutTradeNo,
@@ -174,16 +200,19 @@ func (w *WeChatPayV3Provider) ParseAndVerifyWebhook(ctx context.Context, header 
 	}
 
 	if err := json.Unmarshal(body, &notify); err != nil {
+		slog.Error("malformed wechat webhook payload", slog.Any("error", err), slog.String("raw_body", string(body)))
 		return nil, fmt.Errorf("malformed wechat webhook payload: %w", err)
 	}
 
 	if notify.EventType != "TRANSACTION.SUCCESS" {
+		slog.Warn("ignoring non-success wechat event", slog.String("event_type", notify.EventType), slog.String("notify_id", notify.ID))
 		return nil, fmt.Errorf("unsupported event_type: %s", notify.EventType)
 	}
 
 	// Decrypt AEAD_AES_256_GCM ciphertext
 	plainBytes, err := DecryptAES256GCM(w.cfg.APIv3Key, notify.Resource.AssociatedData, notify.Resource.Nonce, notify.Resource.Ciphertext)
 	if err != nil {
+		slog.Error("failed to decrypt wechat webhook ciphertext", slog.Any("error", err), slog.String("notify_id", notify.ID))
 		return nil, fmt.Errorf("failed to decrypt wechat webhook ciphertext: %w", err)
 	}
 
@@ -202,10 +231,12 @@ func (w *WeChatPayV3Provider) ParseAndVerifyWebhook(ctx context.Context, header 
 	}
 
 	if err := json.Unmarshal(plainBytes, &tx); err != nil {
+		slog.Error("failed to parse decrypted wechat transaction", slog.Any("error", err), slog.String("plain", string(plainBytes)))
 		return nil, fmt.Errorf("failed to parse decrypted wechat transaction: %w", err)
 	}
 
 	if tx.TradeState != "SUCCESS" {
+		slog.Warn("wechat trade_state is not SUCCESS", slog.String("trade_state", tx.TradeState), slog.String("out_trade_no", tx.OutTradeNo))
 		return nil, fmt.Errorf("wechat trade_state is not SUCCESS: %s", tx.TradeState)
 	}
 
@@ -213,6 +244,13 @@ func (w *WeChatPayV3Provider) ParseAndVerifyWebhook(ctx context.Context, header 
 	if paidAt.IsZero() {
 		paidAt = time.Now()
 	}
+
+	slog.Info("wechat webhook verified and decrypted successfully",
+		slog.String("out_trade_no", tx.OutTradeNo),
+		slog.String("transaction_id", tx.TransactionID),
+		slog.Int64("paid_cents", tx.Amount.Total),
+		slog.String("currency", tx.Amount.Currency),
+	)
 
 	return &WebhookPaymentResult{
 		OutTradeNo:      tx.OutTradeNo,

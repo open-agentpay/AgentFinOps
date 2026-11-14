@@ -158,3 +158,10 @@ specs
 *.tar
 *.zip
 
+# Local compilation documents
+docs/AGENTFINOPS_ALL_IN_ONE.md
+apps/marketplace-web/public/docs/AGENTFINOPS_ALL_IN_ONE.html
+apps/marketplace-web/public/docs/assets/AGENTFINOPS_ALL_IN_ONE.*
+
+
+

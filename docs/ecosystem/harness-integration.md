@@ -134,56 +134,57 @@ Agent 需要调用收费的天气专业数据 API。该接口返回 HTTP 402，�
 #### Python 实现
 ```python
 import os
-from agent_core.client.client import AgentPayClient
-from agent_core.policy.models import PolicyConfig
-from agent_core.policy.sqlite_engine import SQLitePolicyEngine
+# 从顶层 agentpay_core 直接导入 AgentPayClient
+from agentpay_core import AgentPayClient, PolicyConfig, SQLitePolicyEngine
 
-# 1. 配置本地安全策略引擎（Fail-Closed 规则，单笔限额与24小时滚动预算）
+# 1. 策略防火墙：仅配置预算和白名单域名
 policy = SQLitePolicyEngine.create_in_memory(
     PolicyConfig(
-        id="weather_agent_policy",
-        max_per_tx_base_units=500_000,          # 单笔最大 0.50 元/点数 (6位微单位: 500,000)
-        rolling_budget_24h_base_units=5_000_000,# 24小时累计预算 5.00 元/点数
-        whitelist_domains={"api.weather.com"},  # 白名单域名防护
+        id="simple_weather",
+        max_per_tx_base_units=250000,  # 0.25 Credits
+        rolling_budget_24h_base_units=5000000,  # 5.00 Credits
+        whitelist_domains={"gate.aipmedia.cn"},
     )
 )
 
-# 2. 实例化 AgentPayClient（统一连接 gate.aipmedia.cn）
+# 2. 客户端直接传入 api_key，自动开启虚拟钱包模式与 402 自动握手
 client = AgentPayClient(
-    api_key=os.environ["AGENTPAY_API_KEY"],
+    api_key=os.getenv("AGENT_API_KEY", "apk_live_guest_35f4d15ea0ea3dd5e26e7c6b9bb7c35d"),
     policy=policy,
-    base_url="https://gate.aipmedia.cn",
 )
 
-# 3. 发起普通 GET 请求。当遇到 402 时，Transport 会自动完成鉴权预扣并重试获取数据
-response = client.get("https://api.weather.com/v1/forecast?city=Beijing")
-print("Response Status:", response.status_code)
-print("Weather Data:", response.json())
+# 3. 正常发起调用
+response = client.get(
+    "https://gate.aipmedia.cn/api/v1/simple-weather",
+    params={
+        "city": "北京"
+    }
+)
+print("Response:", response.json())
 ```
 
 #### TypeScript 实现
 ```typescript
-import { AgentPayClient, SQLitePolicyEngine, PolicyConfig } from '@open-agentpay/sdk';
+import { AgentPayClient, SQLitePolicyEngine, PolicyConfig } from 'agentpay-core-sdk';
 
 const policy = SQLitePolicyEngine.createInMemory(
   new PolicyConfig({
-    id: 'weather_agent_policy',
-    maxPerTxBaseUnits: 500_000n,          // 单笔上限 0.50
-    rollingBudget24hBaseUnits: 5_000_000n, // 24小时滚动上限 5.00
-    whitelistDomains: ['api.weather.com'],
+    id: 'simple_weather',
+    maxPerTxBaseUnits: 250_000n,          // 0.25 Credits
+    rollingBudget24hBaseUnits: 5_000_000n, // 5.00 Credits
+    whitelistDomains: ['gate.aipmedia.cn'],
   })
 );
 
 const client = new AgentPayClient({
-  apiKey: process.env.AGENTPAY_API_KEY,
+  apiKey: process.env.AGENT_API_KEY || 'apk_live_guest_35f4d15ea0ea3dd5e26e7c6b9bb7c35d',
   policy,
-  baseUrl: 'https://gate.aipmedia.cn',
 });
 
 // 透明发起请求，底层自动处理 402 挑战签名与重试
-const response = await client.fetch('https://api.weather.com/v1/forecast?city=Beijing');
-const weatherData = await response.json();
-console.log('Weather Data:', weatherData);
+const response = await client.fetch('https://gate.aipmedia.cn/api/v1/simple-weather?city=%E5%8C%97%E4%BA%AC');
+const data = await response.json();
+console.log('Response:', data);
 ```
 
 ---
@@ -199,10 +200,8 @@ import os
 from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from agent_core.client.client import AgentPayClient
-from agent_core.integrations.langchain import get_agentpay_tools
-from agent_core.policy.models import PolicyConfig
-from agent_core.policy.sqlite_engine import SQLitePolicyEngine
+from agentpay_core import AgentPayClient, PolicyConfig, SQLitePolicyEngine
+from agentpay_core.integrations.langchain import get_agentpay_tools
 
 # 1. 初始化客户端
 client = AgentPayClient(
@@ -272,14 +271,12 @@ console.log(`已加载 ${tools.length} 个 AgentPay 显式工具:`, tools.map(t 
 import os
 import json
 from openai import OpenAI
-from agent_core.client.client import AgentPayClient
-from agent_core.integrations.openai import (
+from agentpay_core import AgentPayClient, PolicyConfig, SQLitePolicyEngine
+from agentpay_core.integrations.openai import (
     get_openai_tools,
     handle_openai_tool_call,
     protect_openai_function,
 )
-from agent_core.policy.models import PolicyConfig
-from agent_core.policy.sqlite_engine import SQLitePolicyEngine
 
 client = AgentPayClient(
     api_key=os.environ["AGENTPAY_API_KEY"],
@@ -363,10 +360,8 @@ const safeExecuteTask = protectOpenAIFunction(
 ```python
 import os
 from crewai import Agent, Crew, Task
-from agent_core.client.client import AgentPayClient
-from agent_core.integrations.crewai import get_crewai_tools
-from agent_core.policy.models import PolicyConfig
-from agent_core.policy.sqlite_engine import SQLitePolicyEngine
+from agentpay_core import AgentPayClient, PolicyConfig, SQLitePolicyEngine
+from agentpay_core.integrations.crewai import get_crewai_tools
 
 client = AgentPayClient(
     api_key=os.environ["AGENTPAY_API_KEY"],

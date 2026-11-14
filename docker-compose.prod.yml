@@ -56,6 +56,9 @@ services:
       - agentfinops-net
 
   console:
+    build:
+      context: ./apps/console
+      dockerfile: Dockerfile
     platform: linux/amd64
     image: ${DOCKER_REGISTRY:-openagentpay}/agentfinops-console:${IMAGE_TAG:-latest}
     container_name: agentfinops-console
@@ -63,6 +66,8 @@ services:
     depends_on:
       gateway:
         condition: service_healthy
+    volumes:
+      - ./apps/console/dist:/usr/share/nginx/html:ro
     ports:
       - "${CONSOLE_PORT:-3002}:80"
     healthcheck:

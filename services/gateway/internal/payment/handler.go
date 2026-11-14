@@ -1,9 +1,12 @@
 package payment
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -165,7 +168,7 @@ func (h *Handler) handleCreateTopUpOrder(w http.ResponseWriter, r *http.Request,
 	channel := strings.TrimSpace(body.Channel)
 	prov := h.getProvider(channel)
 	if prov == nil {
-		writeJSONError(w, http.StatusBadRequest, "unsupported or unconfigured payment channel")
+		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("unsupported or unconfigured payment channel: %s", channel))
 		return
 	}
 	if channel == "" {
@@ -173,7 +176,20 @@ func (h *Handler) handleCreateTopUpOrder(w http.ResponseWriter, r *http.Request,
 	}
 
 	now := time.Now()
-	topupID := fmt.Sprintf("top_%s_%d", tenantID, now.UnixNano())
+	// WeChat Pay V3 out_trade_no must be alphanumeric/underscore between 6 and 32 characters.
+	// Format: "top_" (4) + YYYYMMDDHHMMSS (14) + "_" (1) + 8 hex chars (8) = 27 characters.
+	randBytes := make([]byte, 4)
+	_, _ = rand.Read(randBytes)
+	topupID := fmt.Sprintf("top_%s_%s", now.Format("20060102150405"), hex.EncodeToString(randBytes))
+
+	slog.Info("creating topup order",
+		slog.String("tenant_id", tenantID),
+		slog.String("wallet_id", walletID),
+		slog.String("channel", channel),
+		slog.String("topup_id", topupID),
+		slog.Int64("amount_cents", amount),
+	)
+
 	order := &wallet.TopUpOrder{
 		TopUpID:            topupID,
 		WalletID:           walletID,
@@ -188,6 +204,11 @@ func (h *Handler) handleCreateTopUpOrder(w http.ResponseWriter, r *http.Request,
 	}
 
 	if err := walletSvc.CreatePendingTopUp(r.Context(), order); err != nil {
+		slog.Error("failed to create pending topup order in DB",
+			slog.String("tenant_id", tenantID),
+			slog.String("topup_id", topupID),
+			slog.Any("error", err),
+		)
 		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("failed to create pending topup order: %v", err))
 		return
 	}
@@ -202,11 +223,29 @@ func (h *Handler) handleCreateTopUpOrder(w http.ResponseWriter, r *http.Request,
 		ClientIP:    r.RemoteAddr,
 	}
 
+	slog.Info("calling payment provider prepay",
+		slog.String("provider", prov.Name()),
+		slog.String("out_trade_no", topupID),
+		slog.Int64("amount_cents", amount),
+	)
+
 	prepayRes, err := prov.CreatePrepayOrder(r.Context(), prepayReq)
 	if err != nil {
+		slog.Error("payment provider prepay failed",
+			slog.String("provider", prov.Name()),
+			slog.String("out_trade_no", topupID),
+			slog.Any("error", err),
+		)
 		writeJSONError(w, http.StatusBadGateway, fmt.Sprintf("payment provider prepay error: %v", err))
 		return
 	}
+
+	slog.Info("prepay order created successfully",
+		slog.String("provider", prov.Name()),
+		slog.String("out_trade_no", topupID),
+		slog.String("code_url", prepayRes.CodeURL),
+		slog.Int64("expires_at", prepayRes.ExpiresAt.Unix()),
+	)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -342,6 +381,7 @@ func (h *Handler) WeChatWebhookHandler() http.Handler {
 
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
+			slog.Error("failed to read wechat webhook body", slog.Any("error", err))
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			_ = json.NewEncoder(w).Encode(map[string]string{
@@ -351,8 +391,11 @@ func (h *Handler) WeChatWebhookHandler() http.Handler {
 			return
 		}
 
+		slog.Info("wechat webhook raw notification received", slog.Int("bytes", len(bodyBytes)))
+
 		result, err := prov.ParseAndVerifyWebhook(r.Context(), r.Header, bodyBytes)
 		if err != nil {
+			slog.Error("wechat webhook parse/verify failed", slog.Any("error", err), slog.String("raw_body", string(bodyBytes)))
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
 			_ = json.NewEncoder(w).Encode(map[string]string{
@@ -364,6 +407,12 @@ func (h *Handler) WeChatWebhookHandler() http.Handler {
 
 		_, err = walletSvc.ConfirmTopUpPayment(r.Context(), result.OutTradeNo, result.TransactionID, result.PaidAmountCents, "wechat_pay_topup", result.PaidAt)
 		if err != nil {
+			slog.Error("wechat webhook failed to confirm and credit wallet",
+				slog.String("out_trade_no", result.OutTradeNo),
+				slog.String("transaction_id", result.TransactionID),
+				slog.Int64("paid_cents", result.PaidAmountCents),
+				slog.Any("error", err),
+			)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			_ = json.NewEncoder(w).Encode(map[string]string{
@@ -372,6 +421,13 @@ func (h *Handler) WeChatWebhookHandler() http.Handler {
 			})
 			return
 		}
+
+		slog.Info("wechat payment successfully confirmed and credited to tenant wallet",
+			slog.String("out_trade_no", result.OutTradeNo),
+			slog.String("transaction_id", result.TransactionID),
+			slog.Int64("amount_cents", result.PaidAmountCents),
+			slog.Time("paid_at", result.PaidAt),
+		)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -383,6 +439,11 @@ func (h *Handler) WeChatWebhookHandler() http.Handler {
 }
 
 func writeJSONError(w http.ResponseWriter, status int, msg string) {
+	if status >= 500 {
+		slog.Error("payment API response error", slog.Int("status", status), slog.String("message", msg))
+	} else if status >= 400 {
+		slog.Warn("payment API client rejected", slog.Int("status", status), slog.String("message", msg))
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
