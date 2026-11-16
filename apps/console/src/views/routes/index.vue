@@ -614,8 +614,8 @@ function openEditDialog(route: Route) {
   editForm.route_type = route.route_type || 'api';
   editForm.model_name = route.model_name || '';
   editForm.pricing_type = route.pricing_type || (route.route_type === 'llm' ? 'per_token' : 'fixed');
-  editForm.prompt_token_price_credits = (route.prompt_token_price_base_units || route.price_base_units || 0) / 1000000;
-  editForm.completion_token_price_credits = (route.completion_token_price_base_units || (route.prompt_token_price_base_units ? route.prompt_token_price_base_units * 2 : route.price_base_units ? route.price_base_units * 2 : 0)) / 1000000;
+  editForm.prompt_token_price_credits = (route.prompt_token_price_base_units || route.price_base_units || (route.route_type === 'llm' ? 1000 : 0)) / 1000000;
+  editForm.completion_token_price_credits = (route.completion_token_price_base_units || (route.prompt_token_price_base_units ? route.prompt_token_price_base_units * 2 : route.price_base_units ? route.price_base_units * 2 : (route.route_type === 'llm' ? 2000 : 0))) / 1000000;
   editForm.slug = route.slug || '';
   editForm.title = route.title || '';
   editForm.summary = route.summary || '';
@@ -1502,33 +1502,37 @@ function copyToClipboard(text: string) {
             </el-radio-group>
           </el-form-item>
 
-          <!-- 流式 Token 计费配置 -->
+          <!-- 流式 Token 计费配置 (独立两列卡片，自适应宽度且无 label 挤压) -->
           <template v-if="createForm.route_type === 'llm' && createForm.pricing_type === 'per_token'">
-            <div style="display: flex; gap: 24px;">
-              <el-form-item :label="$t('输入单价 (Prompt)')" style="flex: 1;">
+            <div class="llm-token-pricing-box">
+              <div class="pricing-col">
+                <div class="pricing-label">{{ $t('输入单价 (Prompt)') }}</div>
                 <el-input-number
                   v-model="createForm.prompt_token_price_credits"
                   :min="0"
                   :step="0.0005"
                   :precision="6"
+                  controls-position="right"
                   style="width: 100%"
                 />
-                <div class="form-hint">
+                <div class="pricing-tag">
                   ≈ {{ ((createForm.prompt_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
                 </div>
-              </el-form-item>
-              <el-form-item :label="$t('输出单价 (Completion)')" style="flex: 1;">
+              </div>
+              <div class="pricing-col">
+                <div class="pricing-label">{{ $t('输出单价 (Completion)') }}</div>
                 <el-input-number
                   v-model="createForm.completion_token_price_credits"
                   :min="0"
                   :step="0.001"
                   :precision="6"
+                  controls-position="right"
                   style="width: 100%"
                 />
-                <div class="form-hint">
+                <div class="pricing-tag">
                   ≈ {{ ((createForm.completion_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
                 </div>
-              </el-form-item>
+              </div>
             </div>
           </template>
 
@@ -1984,33 +1988,37 @@ function copyToClipboard(text: string) {
             </el-radio-group>
           </el-form-item>
 
-          <!-- 流式 Token 计费配置 -->
+          <!-- 流式 Token 计费配置 (独立两列卡片，自适应宽度且无 label 挤压) -->
           <template v-if="editForm.route_type === 'llm' && editForm.pricing_type === 'per_token'">
-            <div style="display: flex; gap: 24px;">
-              <el-form-item :label="$t('输入单价 (Prompt)')" style="flex: 1;">
+            <div class="llm-token-pricing-box">
+              <div class="pricing-col">
+                <div class="pricing-label">{{ $t('输入单价 (Prompt)') }}</div>
                 <el-input-number
                   v-model="editForm.prompt_token_price_credits"
                   :min="0"
                   :step="0.0005"
                   :precision="6"
+                  controls-position="right"
                   style="width: 100%"
                 />
-                <div class="form-hint">
+                <div class="pricing-tag">
                   ≈ {{ ((editForm.prompt_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
                 </div>
-              </el-form-item>
-              <el-form-item :label="$t('输出单价 (Completion)')" style="flex: 1;">
+              </div>
+              <div class="pricing-col">
+                <div class="pricing-label">{{ $t('输出单价 (Completion)') }}</div>
                 <el-input-number
                   v-model="editForm.completion_token_price_credits"
                   :min="0"
                   :step="0.001"
                   :precision="6"
+                  controls-position="right"
                   style="width: 100%"
                 />
-                <div class="form-hint">
+                <div class="pricing-tag">
                   ≈ {{ ((editForm.completion_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
                 </div>
-              </el-form-item>
+              </div>
             </div>
           </template>
 
@@ -2234,5 +2242,32 @@ function copyToClipboard(text: string) {
 .route-edit-dialog :deep(.el-form-item__label) {
   font-weight: 500;
   white-space: nowrap;
+}
+.llm-token-pricing-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 22px;
+}
+.pricing-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pricing-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+.pricing-tag {
+  font-size: 12px;
+  color: #6366f1;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
 }
 </style>

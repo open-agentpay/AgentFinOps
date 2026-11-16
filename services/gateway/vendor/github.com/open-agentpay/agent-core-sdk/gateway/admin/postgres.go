@@ -2600,7 +2600,8 @@ func (p *PostgresService) SyncRCU(ctx context.Context) error {
 		       COALESCE(r.is_trial_allowed, TRUE),
 		       c.type, c.params, c.secret_enc, c.key_version,
 		       COALESCE(r.route_type, 'api'), COALESCE(r.model_name, ''), COALESCE(r.pricing_type, 'fixed'),
-		       COALESCE(r.prompt_token_price_base_units, 0), COALESCE(r.completion_token_price_base_units, 0)
+		       COALESCE(r.prompt_token_price_base_units, 0), COALESCE(r.completion_token_price_base_units, 0),
+		       COALESCE(r.is_public, FALSE)
 		FROM ap_route r
 		LEFT JOIN api_auth_configs c ON c.api_id = r.route_id
 		WHERE r.status = 'active';
@@ -2621,6 +2622,7 @@ func (p *PostgresService) SyncRCU(ctx context.Context) error {
 		var cKeyVersion sql.NullInt64
 		var routeType, modelName, pricingType sql.NullString
 		var promptPrice, completionPrice sql.NullInt64
+		var isPublic sql.NullBool
 
 		if err := rows.Scan(
 			&r.RouteID, &r.TenantID, &r.ProjectID, &r.PathPattern, &r.UpstreamURL,
@@ -2629,8 +2631,13 @@ func (p *PostgresService) SyncRCU(ctx context.Context) error {
 			&isTrialAllowed,
 			&cType, &cParamsBytes, &cSecretEnc, &cKeyVersion,
 			&routeType, &modelName, &pricingType, &promptPrice, &completionPrice,
+			&isPublic,
 		); err != nil {
 			return fmt.Errorf("failed to scan active route: %w", err)
+		}
+		if isPublic.Valid {
+			r.IsPublic = isPublic.Bool
+			r.IsPublicSnake = isPublic.Bool
 		}
 		if routeType.Valid && routeType.String != "" {
 			r.RouteType = routeType.String
