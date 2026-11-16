@@ -3,6 +3,9 @@ name: Deploy Docs to GitHub Pages
 on:
   push:
     branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
 # 设置 GITHUB_TOKEN 权限以允许部署到 GitHub Pages
