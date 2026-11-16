@@ -2,6 +2,8 @@ import type { UpstreamAuthConfig } from './auth_config';
 
 export type RouteStatus = 'active' | 'disabled';
 export type PaymentMethod = 'wallet';
+export type RouteType = 'api' | 'llm';
+export type PricingType = 'fixed' | 'per_token';
 
 export interface RouteParameter {
   name: string;
@@ -15,6 +17,12 @@ export interface Route {
   route_id: string;
   tenant_id: string;
   project_id: string;
+  route_type?: RouteType;
+  model_name?: string;
+  pricing_type?: PricingType;
+  prompt_token_price_base_units?: number;
+  completion_token_price_base_units?: number;
+  model_metadata?: Record<string, unknown>;
   slug?: string;
   title?: string;
   summary?: string;
@@ -42,6 +50,12 @@ export interface Route {
 
 export interface CreateRoutePayload {
   project_id: string;
+  route_type?: RouteType;
+  model_name?: string;
+  pricing_type?: PricingType;
+  prompt_token_price_base_units?: number;
+  completion_token_price_base_units?: number;
+  model_metadata?: Record<string, unknown>;
   slug?: string;
   title?: string;
   summary?: string;
@@ -67,6 +81,12 @@ export interface CreateRoutePayload {
 
 export interface UpdateRoutePayload {
   project_id?: string;
+  route_type?: RouteType;
+  model_name?: string;
+  pricing_type?: PricingType;
+  prompt_token_price_base_units?: number;
+  completion_token_price_base_units?: number;
+  model_metadata?: Record<string, unknown>;
   slug?: string;
   title?: string;
   summary?: string;

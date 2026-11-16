@@ -135,5 +135,62 @@ describe('T4.2 Console - Route & Upstream Management Test Suite', () => {
       await routeApi.deleteRoute('ten_test', 'rou_test_123');
       expect(deleteSpy).toHaveBeenCalledWith('ten_test', 'rou_test_123');
     });
+
+    it('should support creating LLM routes with per_token pricing and micro-units', async () => {
+      const promptCny = 0.001; // 0.001 CNY per 1k tokens -> 1000 base units
+      const completionCny = 0.002; // 0.002 CNY per 1k tokens -> 2000 base units
+      const promptBaseUnits = Math.round(promptCny * 1000000);
+      const completionBaseUnits = Math.round(completionCny * 1000000);
+
+      const llmPayload: CreateRoutePayload = {
+        project_id: 'prj_test',
+        route_type: 'llm',
+        pricing_type: 'per_token',
+        title: 'DeepSeek V3 Production',
+        model_name: 'deepseek-chat',
+        path_pattern: '/models/deepseek-chat',
+        upstream_url: 'https://api.deepseek.com',
+        price_base_units: promptBaseUnits,
+        prompt_token_price_base_units: promptBaseUnits,
+        completion_token_price_base_units: completionBaseUnits,
+        allowed_payment_methods: 'wallet',
+        upstream_auth: {
+          type: 'bearer',
+          secrets: {
+            token: 'sk-deepseek-test-key',
+          },
+        },
+      };
+
+      const mockLlmRoute: Route = {
+        route_id: 'rou_llm_001',
+        tenant_id: 'ten_test',
+        project_id: 'prj_test',
+        route_type: 'llm',
+        pricing_type: 'per_token',
+        model_name: 'deepseek-chat',
+        path_pattern: '/models/deepseek-chat',
+        upstream_url: 'https://api.deepseek.com',
+        price_base_units: promptBaseUnits,
+        prompt_token_price_base_units: promptBaseUnits,
+        completion_token_price_base_units: completionBaseUnits,
+        asset: 'Credits',
+        allowed_payment_methods: 'wallet',
+        rate_limit_rpm: 600,
+        timeout_ms: 60000,
+        status: 'active',
+        created_at: 1700000000,
+        updated_at: 1700000000,
+      };
+
+      const spy = vi.spyOn(routeApi, 'createRoute').mockResolvedValue(mockLlmRoute);
+      const res = await routeApi.createRoute('ten_test', llmPayload);
+
+      expect(spy).toHaveBeenCalledWith('ten_test', llmPayload);
+      expect(res.route_type).toBe('llm');
+      expect(res.model_name).toBe('deepseek-chat');
+      expect(res.prompt_token_price_base_units).toBe(1000);
+      expect(res.completion_token_price_base_units).toBe(2000);
+    });
   });
 });
