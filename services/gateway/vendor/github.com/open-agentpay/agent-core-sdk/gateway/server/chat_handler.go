@@ -226,16 +226,26 @@ func (h *ChatCompletionHandler) handleChatCompletions(w http.ResponseWriter, r *
 		}
 	}
 	upstreamReq.Header.Set("Content-Type", "application/json")
+	upstreamReq.Header.Set("Accept-Encoding", "identity")
 
 	// Apply Upstream Auth if configured
 	authCfg := route.UpstreamAuth
 	if authCfg == nil {
 		authCfg = route.UpstreamAuthSnake
 	}
-	if authCfg != nil {
+	if authCfg != nil && authCfg.Type != "" && authCfg.Type != "none" {
 		authenticator, ok := upstreamauth.Get(authCfg.Type)
 		if ok {
-			_ = authenticator.Apply(r.Context(), upstreamReq, authCfg.Params, route.UpstreamSecrets)
+			secrets := route.UpstreamSecrets
+			if (secrets == nil || len(secrets) == 0) && len(authCfg.SecretEnc) > 0 {
+				if dec, err := upstreamauth.DecryptSecretsVersioned(authCfg.SecretEnc, authCfg.KeyVersion); err == nil {
+					secrets = dec
+				}
+			}
+			if len(secrets) == 0 && len(authCfg.Secrets) > 0 {
+				secrets = authCfg.Secrets
+			}
+			_ = authenticator.Apply(r.Context(), upstreamReq, authCfg.Params, secrets)
 		}
 	}
 

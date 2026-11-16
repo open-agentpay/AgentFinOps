@@ -2682,6 +2682,11 @@ func (p *PostgresService) SyncRCU(ctx context.Context) error {
 				HasSecret:  len(cSecretEnc) > 0,
 				KeyVersion: int(cKeyVersion.Int64),
 			}
+			if len(cSecretEnc) > 0 {
+				if dec, err := upstreamauth.DecryptSecretsVersioned(cSecretEnc, int(cKeyVersion.Int64)); err == nil {
+					r.UpstreamSecrets = dec
+				}
+			}
 		}
 		routes = append(routes, r)
 	}
