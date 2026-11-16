@@ -1494,7 +1494,7 @@ function copyToClipboard(text: string) {
             </el-radio-group>
           </el-form-item>
 
-          <!-- 计价计费策略模式 (LLM 支持 Token 微计费) -->
+          <!-- 计价计费策略模式 (LLM 支持 Token 流式计费) -->
           <el-form-item v-if="createForm.route_type === 'llm'" :label="$t('计费计价模式')">
             <el-radio-group v-model="createForm.pricing_type" size="default">
               <el-radio-button label="per_token">{{ $t('毫秒级 Token 流式计费 (千Tokens)') }}</el-radio-button>
@@ -1514,7 +1514,7 @@ function copyToClipboard(text: string) {
                   style="width: 100%"
                 />
                 <div class="form-hint">
-                  ≈ {{ Math.round((createForm.prompt_token_price_credits || 0) * 1000000).toLocaleString() }} {{ $t('微单位 / 1k Tokens') }}
+                  ≈ {{ ((createForm.prompt_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
                 </div>
               </el-form-item>
               <el-form-item :label="$t('输出单价 (Completion)')" style="flex: 1;">
@@ -1526,7 +1526,7 @@ function copyToClipboard(text: string) {
                   style="width: 100%"
                 />
                 <div class="form-hint">
-                  ≈ {{ Math.round((createForm.completion_token_price_credits || 0) * 1000000).toLocaleString() }} {{ $t('微单位 / 1k Tokens') }}
+                  ≈ {{ ((createForm.completion_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
                 </div>
               </el-form-item>
             </div>
@@ -1976,7 +1976,7 @@ function copyToClipboard(text: string) {
             </el-radio-group>
           </el-form-item>
 
-          <!-- 计价计费策略模式 (LLM 支持 Token 微计费) -->
+          <!-- 计价计费策略模式 (LLM 支持 Token 流式计费) -->
           <el-form-item v-if="editForm.route_type === 'llm'" :label="$t('计费计价模式')">
             <el-radio-group v-model="editForm.pricing_type" size="default">
               <el-radio-button label="per_token">{{ $t('毫秒级 Token 流式计费 (千Tokens)') }}</el-radio-button>
@@ -1996,7 +1996,7 @@ function copyToClipboard(text: string) {
                   style="width: 100%"
                 />
                 <div class="form-hint">
-                  ≈ {{ Math.round((editForm.prompt_token_price_credits || 0) * 1000000).toLocaleString() }} {{ $t('微单位 / 1k Tokens') }}
+                  ≈ {{ ((editForm.prompt_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
                 </div>
               </el-form-item>
               <el-form-item :label="$t('输出单价 (Completion)')" style="flex: 1;">
@@ -2008,7 +2008,7 @@ function copyToClipboard(text: string) {
                   style="width: 100%"
                 />
                 <div class="form-hint">
-                  ≈ {{ Math.round((editForm.completion_token_price_credits || 0) * 1000000).toLocaleString() }} {{ $t('微单位 / 1k Tokens') }}
+                  ≈ {{ ((editForm.completion_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
                 </div>
               </el-form-item>
             </div>

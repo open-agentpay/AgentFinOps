@@ -571,9 +571,8 @@ async function handleDeleteDepartment(dept: Department) {
             style="width: 100%"
           />
           <div class="form-tip">
-            {{ t('转换为微单位') }}:
-            <strong>{{ (createForm.budget_cap_monthly_cny * 1000000).toLocaleString() }}</strong>
-            base units (1 元 = 1,000,000 微单位，精确防浮点溢出)
+            {{ t('换算为分') }}:
+            <strong>{{ (createForm.budget_cap_monthly_cny * 100).toLocaleString() }}</strong> {{ t('分') }}
           </div>
         </el-form-item>
       </el-form>
@@ -634,9 +633,8 @@ async function handleDeleteDepartment(dept: Department) {
             style="width: 100%"
           />
           <div class="form-tip">
-            {{ t('转换为微单位') }}:
-            <strong>{{ (editForm.budget_cap_monthly_cny * 1000000).toLocaleString() }}</strong>
-            base units
+            {{ t('换算为分') }}:
+            <strong>{{ (editForm.budget_cap_monthly_cny * 100).toLocaleString() }}</strong> {{ t('分') }}
           </div>
         </el-form-item>
 
