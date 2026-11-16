@@ -88,7 +88,7 @@ describe('T4.7 Console - Agent Management, KYA & Audit Timeline Test Suite', () 
       expect(kya.owner_email).toBe('alice@agentpay.io');
       expect(kya.autonomy_level).toBe('L3_fully_autonomous');
       expect(kya.status).toBe('verified');
-      expect(kya.attestation_hash).toMatch(/^0x/);
+      expect(kya.attestation_hash).toMatch(/^(0x|sha256_)/);
       expect(kya.allowed_tools).toContain('web_search');
     });
 

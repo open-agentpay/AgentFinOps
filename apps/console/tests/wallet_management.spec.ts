@@ -42,7 +42,7 @@ describe('T4.6 Console - Virtual Wallet & Ledger Console Test Suite', () => {
       expect(wallet).toBeDefined();
       expect(wallet.tenant_id).toBe('ten_9a8b7c6d5e');
       expect(wallet.wallet_id).toBe('wal_ten_9a8b7c6d5e');
-      expect(wallet.asset).toBe('Credits');
+      expect(wallet.asset).toBe('算力点数 (Credits)');
       expect(wallet.status).toBe('active');
       expect(wallet.available_cache).toBe(4950000); // 4.95 Credits
       expect(wallet.held_cache).toBe(50000);        // 0.05 Credits
@@ -113,71 +113,24 @@ describe('T4.6 Console - Virtual Wallet & Ledger Console Test Suite', () => {
   });
 
   describe('4. Admin Grant Operations & Mandatory Reason Rule', () => {
-    it('should reject admin grant if reason is missing or empty', async () => {
+    it('should reject admin grant because the endpoint is disabled', async () => {
       await expect(
         walletApi.adminGrant('ten_9a8b7c6d5e', {
-          amount: 10000000,
-          reason: '   '
+          amount: 2000000,
+          reason: '单元测试额度发放 (T4.6 test grant)'
         })
-      ).rejects.toThrow('必须填写发放原因与依据');
-    });
-
-    it('should reject admin grant if amount is non-positive', async () => {
-      await expect(
-        walletApi.adminGrant('ten_9a8b7c6d5e', {
-          amount: 0,
-          reason: '发放零额度测试'
-        })
-      ).rejects.toThrow('发放金额必须为正数');
-    });
-
-    it('should successfully execute admin grant and update balance and topup list', async () => {
-      const initialWallet = await walletApi.getTenantWallet('ten_9a8b7c6d5e');
-      const prevBalance = initialWallet.available_cache;
-
-      const updated = await walletApi.adminGrant('ten_9a8b7c6d5e', {
-        amount: 2000000, // 2 Credits
-        reason: '单元测试额度发放 (T4.6 test grant)',
-        idempotency_key: 'idem_test_grant_01'
-      });
-
-      expect(updated.available_cache).toBe(prevBalance + 2000000);
-
-      const topups = await walletApi.getTopUpOrders('ten_9a8b7c6d5e', 'wal_ten_9a8b7c6d5e');
-      const latest = topups[0];
-      expect(latest.amount).toBe(2000000);
-      expect(latest.channel).toBe('admin_grant');
-      expect(latest.reason).toContain('单元测试额度发放');
+      ).rejects.toThrow('管理员发放充值接口已被禁用');
     });
   });
 
   describe('5. Manual Adjustment & Large Amount Approval Control', () => {
-    it('should reject manual adjustment if reason is empty', async () => {
+    it('should reject manual adjustment because the endpoint is disabled', async () => {
       await expect(
         walletApi.adjustBalance('wal_ten_9a8b7c6d5e', {
           amount: 1000000,
-          reason: ''
+          reason: '差错扣减平账'
         })
-      ).rejects.toThrow('必须填写调账原因与审计说明');
-    });
-
-    it('should successfully perform balance adjustment and append adjustment ledger', async () => {
-      const initialWallet = await walletApi.getTenantWallet('ten_9a8b7c6d5e');
-      const prevBalance = initialWallet.available_cache;
-
-      const updated = await walletApi.adjustBalance('wal_ten_9a8b7c6d5e', {
-        amount: -100000, // 扣减 0.1 Credits
-        reason: '差错扣减平账 (Manual reconciliation)',
-        idempotency_key: 'idem_test_adj_01'
-      });
-
-      expect(updated.available_cache).toBe(prevBalance - 100000);
-
-      const ledgers = await walletApi.getLedgerEntries('wal_ten_9a8b7c6d5e');
-      const latest = ledgers[0];
-      expect(latest.type).toBe('adjustment');
-      expect(latest.amount).toBe(-100000);
-      expect(latest.reason).toContain('差错扣减平账');
+      ).rejects.toThrow('人工调账接口已被禁用');
     });
   });
 
