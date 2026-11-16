@@ -1,38 +1,7 @@
-.PHONY: test test-unit test-integration test-e2e vectors lint format format-check check clean demo pypi-build pypi-upload
+.PHONY: test gateway-build gateway-test gateway-clean console-dev console-build console-test marketplace-dev marketplace-build marketplace-lint docker-build docker-push compose-up compose-down check clean demo demo-live
 
-PYTHON ?= python3
-
-# Run all test suites across the Monorepo
-test:
-	PYTHONPATH=sdk/python/packages/agentpay/src:sdk/python/packages/agentpay-gateway/src:sdk/python $(PYTHON) -m pytest -v sdk/python/tests
-
-# Run unit tests only
-test-unit:
-	PYTHONPATH=sdk/python/packages/agentpay/src:sdk/python/packages/agentpay-gateway/src:sdk/python $(PYTHON) -m pytest -v sdk/python/tests/unit
-
-# Run integration tests only
-test-integration:
-	PYTHONPATH=sdk/python/packages/agentpay/src:sdk/python/packages/agentpay-gateway/src:sdk/python $(PYTHON) -m pytest -v sdk/python/tests/integration
-
-# Run e2e tests only
-test-e2e:
-	PYTHONPATH=sdk/python/packages/agentpay/src:sdk/python/packages/agentpay-gateway/src:sdk/python $(PYTHON) -m pytest -v sdk/python/tests/e2e
-
-# Validate language-agnostic conformance test vectors
-vectors:
-	$(PYTHON) scripts/validate_vectors.py specs/conformance/test-vectors
-
-# Check code linting with ruff
-lint:
-	$(PYTHON) -m ruff check sdk/python/
-
-# Format code with ruff
-format:
-	$(PYTHON) -m ruff format sdk/python/
-
-# Check code formatting without applying changes
-format-check:
-	$(PYTHON) -m ruff format --check sdk/python/
+# Run all test suites across the project
+test: gateway-test console-test
 
 # Go Gateway targets
 gateway-build:
@@ -73,22 +42,14 @@ docker-build:
 docker-push:
 	./scripts/docker-build-push.sh --push
 
-# Build all PyPI distribution packages (.whl & .tar.gz)
-pypi-build:
-	$(PYTHON) scripts/build_pypi_dist.py
-
-# Publish all built packages to PyPI via twine
-pypi-upload:
-	twine upload dist_all/*
-
 compose-up:
 	docker compose up -d --build
 
 compose-down:
 	docker compose down
 
-# Run complete verification: lint, format-check, test-vectors, pytest, and gateway-test
-check: lint format-check vectors test gateway-test
+# Run complete verification: gateway tests, console tests, and marketplace lint
+check: gateway-test console-test marketplace-lint
 
 # Clean build artifacts and test caches
 clean: gateway-clean
@@ -99,8 +60,8 @@ clean: gateway-clean
 
 # Runaway agent circuit breaker demo (Local simulation)
 demo:
-	PYTHONPATH=sdk/python/packages/agentpay/src:sdk/python/packages/agentpay-gateway/src:sdk/python $(PYTHON) examples/runaway-agent/demo.py
+	python3 examples/runaway-agent/demo.py
 
 # Runaway agent circuit breaker demo (Live simulation)
 demo-live:
-	PYTHONPATH=sdk/python/packages/agentpay/src:sdk/python/packages/agentpay-gateway/src:sdk/python $(PYTHON) examples/runaway-agent/demo.py --live
+	python3 examples/runaway-agent/demo.py --live
