@@ -4,7 +4,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import { useAuthStore } from '@/stores/auth';
 import { useTenantStore } from '@/stores/tenant';
 import { routeApi, configApi } from '@/api/client';
-import type { Route, CreateRoutePayload, UpdateRoutePayload, PaymentMethod, RouteStatus, RouteParameter } from '@/types/route';
+import type { Route, CreateRoutePayload, UpdateRoutePayload, PaymentMethod, RouteStatus, RouteParameter, RouteType, PricingType } from '@/types/route';
 import type { UpstreamAuthConfig } from '@/types/auth_config';
 import type { ConfigDraftSummary, ValidationResult, ConfigDraftDiff } from '@/types/config';
 import PermissionGate from '@/components/PermissionGate.vue';
@@ -306,6 +306,11 @@ const createActiveStep = ref(0);
 const createFormRef = ref<FormInstance>();
 const createForm = reactive({
   project_id: '',
+  route_type: 'api' as RouteType,
+  model_name: '',
+  pricing_type: 'fixed' as PricingType,
+  prompt_token_price_credits: 0.001,
+  completion_token_price_credits: 0.002,
   slug: '',
   title: '',
   summary: '',
@@ -332,6 +337,11 @@ const createForm = reactive({
 function openCreateDialog() {
   createActiveStep.value = 0;
   createForm.project_id = tenantStore.currentProject?.project_id || (tenantStore.projects[0]?.project_id ?? '');
+  createForm.route_type = 'api';
+  createForm.model_name = '';
+  createForm.pricing_type = 'fixed';
+  createForm.prompt_token_price_credits = 0.001;
+  createForm.completion_token_price_credits = 0.002;
   createForm.slug = '';
   createForm.title = '';
   createForm.summary = '';
@@ -437,8 +447,16 @@ async function handleCreateRoute() {
         }))
         .filter((p) => p.name !== '');
 
+      const promptUnits = Math.round(createForm.prompt_token_price_credits * 1000000);
+      const completionUnits = Math.round(createForm.completion_token_price_credits * 1000000);
+
       const payload: CreateRoutePayload = {
         project_id: createForm.project_id,
+        route_type: createForm.route_type,
+        model_name: createForm.route_type === 'llm' ? createForm.model_name.trim() : undefined,
+        pricing_type: createForm.pricing_type,
+        prompt_token_price_base_units: createForm.pricing_type === 'per_token' ? promptUnits : undefined,
+        completion_token_price_base_units: createForm.pricing_type === 'per_token' ? completionUnits : undefined,
         slug: createForm.slug.trim() || undefined,
         title: createForm.title.trim() || undefined,
         summary: createForm.summary.trim() || undefined,
@@ -486,6 +504,11 @@ const editFormRef = ref<FormInstance>();
 const editingRouteId = ref('');
 const editForm = reactive({
   project_id: '',
+  route_type: 'api' as RouteType,
+  model_name: '',
+  pricing_type: 'fixed' as PricingType,
+  prompt_token_price_credits: 0.001,
+  completion_token_price_credits: 0.002,
   slug: '',
   title: '',
   summary: '',
@@ -588,6 +611,11 @@ function openEditDialog(route: Route) {
   editActiveStep.value = 0;
   editingRouteId.value = route.route_id;
   editForm.project_id = route.project_id;
+  editForm.route_type = route.route_type || 'api';
+  editForm.model_name = route.model_name || '';
+  editForm.pricing_type = route.pricing_type || (route.route_type === 'llm' ? 'per_token' : 'fixed');
+  editForm.prompt_token_price_credits = (route.prompt_token_price_base_units || 0) / 1000000;
+  editForm.completion_token_price_credits = (route.completion_token_price_base_units || 0) / 1000000;
   editForm.slug = route.slug || '';
   editForm.title = route.title || '';
   editForm.summary = route.summary || '';
@@ -671,8 +699,16 @@ async function handleUpdateRoute() {
         }))
         .filter((p) => p.name !== '');
 
+      const promptUnits = Math.round(editForm.prompt_token_price_credits * 1000000);
+      const completionUnits = Math.round(editForm.completion_token_price_credits * 1000000);
+
       const payload: UpdateRoutePayload = {
         project_id: editForm.project_id,
+        route_type: editForm.route_type,
+        model_name: editForm.route_type === 'llm' ? editForm.model_name.trim() : undefined,
+        pricing_type: editForm.pricing_type,
+        prompt_token_price_base_units: editForm.pricing_type === 'per_token' ? promptUnits : undefined,
+        completion_token_price_base_units: editForm.pricing_type === 'per_token' ? completionUnits : undefined,
         slug: editForm.slug.trim(),
         title: editForm.title.trim(),
         summary: editForm.summary.trim(),
@@ -1126,6 +1162,43 @@ function copyToClipboard(text: string) {
             </el-select>
           </el-form-item>
 
+          <el-form-item :label="$t('路由类型')" prop="route_type">
+            <el-radio-group v-model="createForm.route_type" size="default">
+              <el-radio-button label="api">{{ $t('通用 API 路由') }}</el-radio-button>
+              <el-radio-button label="llm">
+                <span style="display: flex; align-items: center; gap: 4px;">
+                  <el-icon><Cpu /></el-icon>
+                  {{ $t('大模型服务 (LLM)') }}
+                </span>
+              </el-radio-button>
+            </el-radio-group>
+            <div class="form-hint">
+              {{ createForm.route_type === 'llm'
+                ? $t('大模型服务支持兼容 OpenAI 标准 (/v1/chat/completions 与 /v1/models)，支持 Token 流式计费与中途熔断')
+                : $t('通用 HTTP API 代理转发，支持固定按次扣费与 X402 鉴权') }}
+            </div>
+          </el-form-item>
+
+          <el-form-item
+            v-if="createForm.route_type === 'llm'"
+            :label="$t('模型标识名 (Model)')"
+            prop="model_name"
+          >
+            <el-input
+              v-model="createForm.model_name"
+              :placeholder="$t('例如: deepseek-chat, qwen-plus, gpt-4o')"
+              clearable
+              @input="(val: string) => {
+                if (!createForm.path_pattern || createForm.path_pattern.startsWith('/models/')) {
+                  createForm.path_pattern = val ? `/models/${val}` : '';
+                }
+              }"
+            />
+            <div class="form-hint">
+              {{ $t('客户端调用 /v1/chat/completions 时传入的 model 参数，网关将根据此名称匹配路由') }}
+            </div>
+          </el-form-item>
+
           <el-form-item :label="$t('暴露路径')" prop="path_pattern">
             <el-input
               v-model="createForm.path_pattern"
@@ -1421,8 +1494,46 @@ function copyToClipboard(text: string) {
             </el-radio-group>
           </el-form-item>
 
-          <!-- 单次调用单价 -->
-          <el-form-item :label="$t('单次调用单价')" prop="price_credits">
+          <!-- 计价计费策略模式 (LLM 支持 Token 微计费) -->
+          <el-form-item v-if="createForm.route_type === 'llm'" :label="$t('计费计价模式')">
+            <el-radio-group v-model="createForm.pricing_type" size="default">
+              <el-radio-button label="per_token">{{ $t('毫秒级 Token 流式计费 (千Tokens)') }}</el-radio-button>
+              <el-radio-button label="fixed">{{ $t('固定按次计费') }}</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+
+          <!-- 流式 Token 计费配置 -->
+          <template v-if="createForm.route_type === 'llm' && createForm.pricing_type === 'per_token'">
+            <div style="display: flex; gap: 24px;">
+              <el-form-item :label="$t('输入单价 (Prompt)')" style="flex: 1;">
+                <el-input-number
+                  v-model="createForm.prompt_token_price_credits"
+                  :min="0"
+                  :step="0.0005"
+                  :precision="6"
+                  style="width: 100%"
+                />
+                <div class="form-hint">
+                  ≈ {{ Math.round((createForm.prompt_token_price_credits || 0) * 1000000).toLocaleString() }} {{ $t('微单位 / 1k Tokens') }}
+                </div>
+              </el-form-item>
+              <el-form-item :label="$t('输出单价 (Completion)')" style="flex: 1;">
+                <el-input-number
+                  v-model="createForm.completion_token_price_credits"
+                  :min="0"
+                  :step="0.001"
+                  :precision="6"
+                  style="width: 100%"
+                />
+                <div class="form-hint">
+                  ≈ {{ Math.round((createForm.completion_token_price_credits || 0) * 1000000).toLocaleString() }} {{ $t('微单位 / 1k Tokens') }}
+                </div>
+              </el-form-item>
+            </div>
+          </template>
+
+          <!-- 单次调用单价 (固定按次时展示) -->
+          <el-form-item v-else :label="$t('单次调用单价')" prop="price_credits">
             <el-input-number
               v-model="createForm.price_credits"
               :min="0"
@@ -1530,6 +1641,38 @@ function copyToClipboard(text: string) {
                 :value="p.project_id"
               />
             </el-select>
+          </el-form-item>
+
+          <el-form-item :label="$t('路由类型')" prop="route_type">
+            <el-radio-group v-model="editForm.route_type" size="default">
+              <el-radio-button label="api">{{ $t('通用 API 路由') }}</el-radio-button>
+              <el-radio-button label="llm">
+                <span style="display: flex; align-items: center; gap: 4px;">
+                  <el-icon><Cpu /></el-icon>
+                  {{ $t('大模型服务 (LLM)') }}
+                </span>
+              </el-radio-button>
+            </el-radio-group>
+            <div class="form-hint">
+              {{ editForm.route_type === 'llm'
+                ? $t('大模型服务支持兼容 OpenAI 标准 (/v1/chat/completions 与 /v1/models)，支持 Token 流式计费与中途熔断')
+                : $t('通用 HTTP API 代理转发，支持固定按次扣费与 X402 鉴权') }}
+            </div>
+          </el-form-item>
+
+          <el-form-item
+            v-if="editForm.route_type === 'llm'"
+            :label="$t('模型标识名 (Model)')"
+            prop="model_name"
+          >
+            <el-input
+              v-model="editForm.model_name"
+              :placeholder="$t('例如: deepseek-chat, qwen-plus, gpt-4o')"
+              clearable
+            />
+            <div class="form-hint">
+              {{ $t('客户端调用 /v1/chat/completions 时传入的 model 参数，网关将根据此名称匹配路由') }}
+            </div>
           </el-form-item>
 
           <el-form-item :label="$t('暴露路径')" prop="path_pattern">
@@ -1833,8 +1976,46 @@ function copyToClipboard(text: string) {
             </el-radio-group>
           </el-form-item>
 
-          <!-- 单次调用单价 -->
-          <el-form-item :label="$t('单次调用单价')" prop="price_credits">
+          <!-- 计价计费策略模式 (LLM 支持 Token 微计费) -->
+          <el-form-item v-if="editForm.route_type === 'llm'" :label="$t('计费计价模式')">
+            <el-radio-group v-model="editForm.pricing_type" size="default">
+              <el-radio-button label="per_token">{{ $t('毫秒级 Token 流式计费 (千Tokens)') }}</el-radio-button>
+              <el-radio-button label="fixed">{{ $t('固定按次计费') }}</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+
+          <!-- 流式 Token 计费配置 -->
+          <template v-if="editForm.route_type === 'llm' && editForm.pricing_type === 'per_token'">
+            <div style="display: flex; gap: 24px;">
+              <el-form-item :label="$t('输入单价 (Prompt)')" style="flex: 1;">
+                <el-input-number
+                  v-model="editForm.prompt_token_price_credits"
+                  :min="0"
+                  :step="0.0005"
+                  :precision="6"
+                  style="width: 100%"
+                />
+                <div class="form-hint">
+                  ≈ {{ Math.round((editForm.prompt_token_price_credits || 0) * 1000000).toLocaleString() }} {{ $t('微单位 / 1k Tokens') }}
+                </div>
+              </el-form-item>
+              <el-form-item :label="$t('输出单价 (Completion)')" style="flex: 1;">
+                <el-input-number
+                  v-model="editForm.completion_token_price_credits"
+                  :min="0"
+                  :step="0.001"
+                  :precision="6"
+                  style="width: 100%"
+                />
+                <div class="form-hint">
+                  ≈ {{ Math.round((editForm.completion_token_price_credits || 0) * 1000000).toLocaleString() }} {{ $t('微单位 / 1k Tokens') }}
+                </div>
+              </el-form-item>
+            </div>
+          </template>
+
+          <!-- 单次调用单价 (固定按次时展示) -->
+          <el-form-item v-else :label="$t('单次调用单价')" prop="price_credits">
             <el-input-number
               v-model="editForm.price_credits"
               :min="0"
