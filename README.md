@@ -30,6 +30,10 @@
 
 ## 🏛️ 系统架构全景
 
+![AgentFinOps 系统架构动态演示](architecture/agentfinops.gif)
+
+> 💡 另提供：[交互式 HTML 架构图](architecture/agentfinops.html) ｜ [Mermaid 流程图版本](architecture/agentfinops.md)
+
 ```text
                                ┌────────────────────────────────────────────────────────┐
                                │       AgentFinOps: 企业级 AI 行为审计与资金防火墙网关      │

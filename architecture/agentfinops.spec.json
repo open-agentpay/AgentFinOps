@@ -1,0 +1,232 @@
+{
+  "lang": "zh-CN",
+  "theme": "saas",
+  "width": 1280,
+  "pageTitle": "AgentFinOps 系统架构图",
+  "title": "AgentFinOps · 企业级 AI Agent 行为审计与资金防火墙网关",
+  "subtitle": "来源：AgentFinOps 仓库（services/gateway · apps/console · apps/marketplace-web · infra/postgres/schema.sql）",
+  "layers": [
+    { "id": "caller", "label": "调用方与端侧", "color": "blue" },
+    { "id": "app", "label": "控制台与门户", "color": "cyan" },
+    { "id": "core", "label": "Go 网关数据面", "color": "green" },
+    { "id": "gov", "label": "风控审批与支付", "color": "amber" },
+    { "id": "store", "label": "存储与外部上游", "color": "purple" }
+  ],
+  "flows": [
+    { "id": "call", "label": "同步请求 / 代理转发", "color": "blue" },
+    { "id": "admin", "label": "管理配置 / 门户调用", "color": "cyan" },
+    { "id": "hitl", "label": "402 异步挂起 / HITL 审批", "color": "amber", "dash": true },
+    { "id": "settle", "label": "三态记账与微单位结算", "color": "green" },
+    { "id": "trace", "label": "Trace 穿透 / 行为审计", "color": "purple", "dash": true }
+  ],
+  "groups": [
+    {
+      "id": "g-gateway",
+      "label": "Go 核心网关 · :8000",
+      "color": "green",
+      "solid": true,
+      "x": 368,
+      "y": 344,
+      "w": 904,
+      "h": 190
+    }
+  ],
+  "nodes": [
+    {
+      "id": "agent",
+      "short": "Agent SDK",
+      "layer": "caller",
+      "x": 376,
+      "y": 168,
+      "w": 276,
+      "h": 116,
+      "title": "AI Agent 与业务应用",
+      "sub": "Python / TS / Java SDK",
+      "lines": [
+        "端侧 RPM 熔断与单笔预检",
+        "auto_poll_hitl 自动轮询 402 重放"
+      ]
+    },
+    {
+      "id": "console",
+      "short": "Console",
+      "layer": "app",
+      "x": 682,
+      "y": 168,
+      "w": 276,
+      "h": 116,
+      "title": "管理控制台 · Console",
+      "sub": "Vue 3.5 + Element Plus · :3000",
+      "lines": [
+        "四级组织预算切分与策略配置",
+        "实时流水监控 · 对账与发票导出"
+      ]
+    },
+    {
+      "id": "market",
+      "short": "Marketplace",
+      "layer": "app",
+      "x": 988,
+      "y": 168,
+      "w": 276,
+      "h": 116,
+      "title": "服务市场 · Marketplace",
+      "sub": "Next.js 15 + React 19 · :3001",
+      "lines": [
+        "公开 API 目录与 GEO 门户",
+        "零门槛沙箱试用与在线充值入口"
+      ]
+    },
+    {
+      "id": "rcu",
+      "short": "RCU 路由",
+      "layer": "core",
+      "x": 376,
+      "y": 364,
+      "w": 276,
+      "h": 152,
+      "title": "动态路由与 RCU 引擎",
+      "sub": "agent-core-sdk/gateway/rcu",
+      "lines": [
+        "ConfigSnapshot 无锁热更新",
+        "SHA-256 API Key 鉴权与限流"
+      ]
+    },
+    {
+      "id": "quota",
+      "short": "级联配额",
+      "layer": "core",
+      "x": 682,
+      "y": 364,
+      "w": 276,
+      "h": 152,
+      "title": "四级级联配额引擎",
+      "sub": "CascadeQuotaEnforcer",
+      "lines": [
+        "租户 → 部门祖先链 → 项目 → Agent",
+        "6 位微单位整型计数 · 硬顶熔断"
+      ]
+    },
+    {
+      "id": "sm",
+      "short": "三态机",
+      "layer": "gov",
+      "x": 988,
+      "y": 364,
+      "w": 276,
+      "h": 152,
+      "title": "402 挂起与三态状态机",
+      "sub": "Hold / Capture / Release",
+      "lines": [
+        "中大额触发 402 异步挂起",
+        "SSE Token 计量 · 超时自动解冻"
+      ]
+    },
+    {
+      "id": "pay",
+      "short": "支付清算",
+      "layer": "gov",
+      "x": 376,
+      "y": 594,
+      "w": 276,
+      "h": 118,
+      "title": "支付与充值清算引擎",
+      "sub": "WeChat Pay V3 / Sandbox Mock",
+      "lines": [
+        "对公预付充值 · 微单位换算",
+        "external_ref + 流水双层幂等"
+      ]
+    },
+    {
+      "id": "collab",
+      "short": "协同审批",
+      "layer": "gov",
+      "x": 682,
+      "y": 594,
+      "w": 276,
+      "h": 118,
+      "title": "协同审批端 · HITL",
+      "sub": "飞书 · 企业微信 · 钉钉",
+      "lines": [
+        "接收 402 富文本审批卡片",
+        "移动端一键放行 · 防重放核销"
+      ]
+    },
+    {
+      "id": "upstream",
+      "short": "上游 API",
+      "layer": "store",
+      "x": 988,
+      "y": 594,
+      "w": 276,
+      "h": 118,
+      "title": "上游模型与商业 API",
+      "sub": "DeepSeek · 通义千问 · 付费数据源",
+      "lines": [
+        "Master Key 集中托管绝不下沉",
+        "AES-256 / KMS 专线代理履约"
+      ]
+    },
+    {
+      "id": "pg",
+      "short": "PostgreSQL",
+      "layer": "store",
+      "x": 376,
+      "y": 768,
+      "w": 582,
+      "h": 164,
+      "title": "PostgreSQL 15 权威存储 · :5432",
+      "sub": "infra/postgres/schema.sql",
+      "rows": [
+        { "name": "ap_tenant / department / project / agent", "desc": "四级组织树与预算" },
+        { "name": "ap_wallet / ap_ledger_entry / ap_hold", "desc": "Append-Only 不可变账本" },
+        { "name": "ap_approval_request / agent_audit_event", "desc": "HITL 审批与行为黑匣子" }
+      ]
+    },
+    {
+      "id": "langfuse",
+      "short": "Langfuse",
+      "layer": "store",
+      "x": 988,
+      "y": 768,
+      "w": 276,
+      "h": 164,
+      "title": "Langfuse 全链路观测",
+      "sub": "X-Langfuse-Trace-Id 穿透",
+      "lines": [
+        "Prompt 追踪与 Token 质量评估",
+        "控制台一键跳转 Trace 详情",
+        "大脑监控 + 双手防火墙共生"
+      ]
+    }
+  ],
+  "edges": [
+    { "flow": "call", "from": "agent.b@-36px", "to": "rcu.t@-36px", "label": "API 请求 / 402 重放", "labelPos": [616, 314] },
+    { "flow": "admin", "from": "console.b", "to": "quota.t", "label": "组织预算 / 策略配置" },
+    { "flow": "admin", "from": "market.b", "to": "sm.t", "label": "沙箱试用 / 充值引导" },
+    { "flow": "call", "from": "rcu.r", "to": "quota.l", "label": "校验" },
+    { "flow": "call", "from": "quota.r", "to": "sm.l", "label": "放行" },
+    { "flow": "settle", "from": "quota.b@40px", "to": "pay.t", "mid": 558, "label": "充值入账", "labelSeg": 2, "labelSide": "above" },
+    { "flow": "hitl", "from": "sm.b@40px", "to": "collab.t", "arrow": "both", "mid": 558, "label": "402 卡片 / 一键放行", "labelSeg": 2, "labelSide": "above" },
+    { "flow": "call", "from": "sm.b", "to": "upstream.t", "arrow": "both", "label": "Hold 转发 / Token 计量", "labelSide": "right" },
+    { "flow": "settle", "from": "pay.b", "to": "pg.t@138px", "label": "ap_topup_order", "labelSide": "left" },
+    { "flow": "settle", "from": "quota.b", "to": "pg.t@291px", "arrow": "both", "via": [[667, 566], [667, 738]], "label": "级联配额 / 写账本", "labelPos": [667, 738] },
+    { "flow": "hitl", "from": "collab.b", "to": "pg.t@444px", "label": "ap_approval_request", "labelSide": "right" },
+    { "flow": "trace", "from": "upstream.b", "to": "langfuse.t", "label": "Trace ID 穿透", "labelSide": "right" }
+  ],
+  "log": {
+    "title": "live trace · 防火墙与三态状态机实时流转",
+    "x": 16,
+    "y": 168,
+    "w": 328,
+    "h": 764,
+    "compact": true,
+    "cols": "82px 46px 1fr",
+    "live": { "rows": 35 }
+  },
+  "footer": {
+    "cwd": "~/AgentFinOps",
+    "cmd": "docker compose up -d",
+    "note": "一键启动 PostgreSQL (:5432) · Go 网关 (:8000) · Console (:3000) · Marketplace (:3001)"
+  }
+}
