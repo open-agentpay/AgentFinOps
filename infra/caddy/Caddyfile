@@ -3,11 +3,11 @@
 # Caddy automatically provisions and renews SSL/TLS certificates (Let's Encrypt)
 # ==============================================================================
 
-# Global Configuration Options
+# Global Configuration Options: disable HTTP/3 to avoid UDP packet loss/timeout issues
 {
-    # Automatically get certificates from Let's Encrypt
-    # Uncomment to enable debug logs if needed:
-    # debug
+    servers {
+        protocols h1 h2
+    }
 }
 
 # ------------------------------------------------------------------------------
