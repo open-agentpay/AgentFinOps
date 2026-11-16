@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Activity,
   ArrowUpRight,
+  BrainCircuit,
   CheckCircle2,
   Clock,
   Code2,
@@ -28,8 +29,13 @@ import {
   PUBLIC_CONSOLE_URL,
   PUBLIC_GATEWAY_URL,
   formatCreditsPrice,
+  formatTokenPriceFen,
+  getLlmModelName,
+  isLlmRoute,
   buildPythonSdkSnippet,
   buildTypescriptSdkSnippet,
+  buildOpenAiPythonSdkSnippet,
+  buildOpenAiNodeSdkSnippet,
 } from '@/lib/marketplace';
 import type { MarketplaceRouteItem } from '@/types/marketplace';
 import { CopyButton } from '@/components/CopyButton';
@@ -153,8 +159,22 @@ console.log('Response:', await response.json());`;
     sdkLang === 'python' ? sampleQuickVerifyPythonSnippet : sampleQuickVerifyTsSnippet;
   const activeInstallCmd =
     sdkLang === 'python' ? 'pip install agentpay-core-sdk' : 'npm install agentpay-core-sdk';
+  const isPreviewLlm = previewRoute ? isLlmRoute(previewRoute) : false;
+  const previewInstallCmd = isPreviewLlm
+    ? sdkLang === 'python'
+      ? 'pip install openai'
+      : 'npm install openai'
+    : sdkLang === 'python'
+    ? 'pip install agentpay-core-sdk'
+    : 'npm install agentpay-core-sdk';
+
   const previewSdkSnippet = useMemo(() => {
     if (!previewRoute) return '';
+    if (isLlmRoute(previewRoute)) {
+      return sdkLang === 'python'
+        ? buildOpenAiPythonSdkSnippet(previewRoute, locale)
+        : buildOpenAiNodeSdkSnippet(previewRoute, locale);
+    }
     return sdkLang === 'python'
       ? buildPythonSdkSnippet(previewRoute, locale)
       : buildTypescriptSdkSnippet(previewRoute, locale);
@@ -565,9 +585,15 @@ console.log('Response:', await response.json());`;
             </div>
           </div>
           <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-            <span className="font-mono">$ {activeInstallCmd}</span>
+            <span className="font-mono">$ {previewInstallCmd}</span>
             <span className="font-mono text-indigo-300">
-              {sdkLang === 'python' ? 'Python 3.10+' : 'Node.js 20+ / TypeScript'}
+              {isPreviewLlm
+                ? sdkLang === 'python'
+                  ? 'Python 3.8+ / openai SDK'
+                  : 'Node.js 18+ / openai SDK'
+                : sdkLang === 'python'
+                ? 'Python 3.10+'
+                : 'Node.js 20+ / TypeScript'}
             </span>
           </div>
           <pre className="mt-2 overflow-x-auto rounded-xl border border-slate-800 bg-[#050811] p-4 font-mono text-xs leading-relaxed text-slate-200">
@@ -600,6 +626,10 @@ console.log('Response:', await response.json());`;
       ) : (
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
           {filteredRoutes.map((route) => {
+            const isLlm = isLlmRoute(route);
+            const llmModel = getLlmModelName(route);
+            const promptFen = formatTokenPriceFen(route.prompt_token_price_base_units ?? 1000);
+            const completionFen = formatTokenPriceFen(route.completion_token_price_base_units ?? 2000);
             const priceCredits = formatCreditsPrice(route.price_base_units);
             const clusterLabel = route.cluster || 'domestic-v1';
             const isHealthy = route.sla?.health_status === 'healthy';
@@ -612,11 +642,19 @@ console.log('Response:', await response.json());`;
                 className="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-indigo-400 hover:shadow-xl dark:border-slate-800/90 dark:bg-slate-900/60 dark:hover:border-indigo-500/50 dark:hover:bg-slate-900/90 dark:hover:shadow-2xl dark:hover:shadow-indigo-950/40"
               >
                 <div>
-                  {/* Top Row: Category + Gateway Health Status */}
+                  {/* Top Row: Category + LLM Badge + Gateway Health Status */}
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-300">
-                      {categoryLabel}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {isLlm && (
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 py-0.5 text-xs font-bold text-purple-700 dark:text-purple-300">
+                          <BrainCircuit className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                          <span>LLM 大模型</span>
+                        </span>
+                      )}
+                      <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-300">
+                        {categoryLabel}
+                      </span>
+                    </div>
 
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
@@ -652,11 +690,16 @@ console.log('Response:', await response.json());`;
                     >
                       {route.title}
                     </Link>
-                    <div className="mt-1.5 flex items-center gap-2 font-mono text-xs text-slate-500 dark:text-slate-400">
+                    <div className="mt-1.5 flex items-center gap-2 font-mono text-xs text-slate-500 dark:text-slate-400 flex-wrap">
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-cyan-700 dark:bg-slate-800 dark:text-cyan-300">
                         {(route.methods || ['GET', 'POST']).join('/')}
                       </span>
                       <span className="truncate">{route.path_pattern}</span>
+                      {isLlm && (
+                        <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[11px] font-semibold text-purple-800 dark:bg-purple-950/70 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/40">
+                          model: {llmModel}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -714,17 +757,37 @@ console.log('Response:', await response.json());`;
 
                   {/* Price & Action Buttons */}
                   <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">{clusterLabel}</div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-mono text-lg font-extrabold text-slate-900 dark:text-white">
-                          {priceCredits}
-                        </span>
-                        <span className="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                          {t.routeCard.perReq}
-                        </span>
+                    {isLlm ? (
+                      <div>
+                        <div className="text-[11px] font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                          <Sparkles className="h-3 w-3 text-purple-500" />
+                          <span>千 Tokens 流式计费</span>
+                        </div>
+                        <div className="mt-0.5 flex items-baseline gap-1 font-mono text-xs">
+                          <div className="flex items-baseline gap-1 text-slate-900 dark:text-white font-bold text-sm">
+                            <span className="text-[10px] text-slate-400 font-normal">入:</span>
+                            <span>{promptFen}</span>
+                            <span className="text-[10px] text-slate-400 font-normal ml-0.5">出:</span>
+                            <span>{completionFen}</span>
+                          </div>
+                          <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                            分 / 1k
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">{clusterLabel}</div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-mono text-lg font-extrabold text-slate-900 dark:text-white">
+                            {priceCredits}
+                          </span>
+                          <span className="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                            {t.routeCard.perReq}
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-2">
                       <button
@@ -735,15 +798,19 @@ console.log('Response:', await response.json());`;
                           )
                         }
                         className="inline-flex items-center gap-1 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:border-indigo-400 hover:text-indigo-700 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:border-indigo-500/50 dark:hover:text-white"
-                        title="Python SDK"
+                        title={isLlm ? "OpenAI SDK 示例" : "SDK 调用示例"}
                       >
-                        <Code2 className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                        <span>{t.routeCard.sdkCode}</span>
+                        <Code2 className={`h-3.5 w-3.5 ${isLlm ? 'text-purple-600 dark:text-purple-400' : 'text-indigo-600 dark:text-indigo-400'}`} />
+                        <span>{isLlm ? 'OpenAI SDK' : t.routeCard.sdkCode}</span>
                       </button>
 
                       <Link
                         href={`/hub/${route.slug}`}
-                        className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-md shadow-indigo-600/20 transition-all hover:bg-indigo-500"
+                        className={`inline-flex items-center gap-1 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-md transition-all ${
+                          isLlm
+                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-purple-600/20'
+                            : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'
+                        }`}
                       >
                         <span>{t.routeCard.details}</span>
                         <ArrowUpRight className="h-3.5 w-3.5" />

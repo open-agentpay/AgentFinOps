@@ -11,6 +11,110 @@ export const MARKETPLACE_CATEGORIES = [
 
 export const SEED_MARKETPLACE_ROUTES: MarketplaceRouteItem[] = [
   {
+    route_id: 'rte_deepseek_v3_chat_00',
+    tenant_id: 'ten_deepseek_official',
+    provider_name: 'DeepSeek (深度求索)',
+    slug: 'deepseek-v3-chat-api',
+    title: 'DeepSeek-V3 高性能大模型对话接口 (OpenAI 兼容)',
+    summary:
+      '官方直通 DeepSeek-V3 (671B MoE) 生产级对话大模型，全面兼容 OpenAI 协议。毫秒级 SSE 流式返回，按产生 Token 实收（输入 0.10 分/1k，输出 0.20 分/1k），支持流式断流预算保护与即充即用。',
+    category: 'AI & LLM',
+    tags: ['DeepSeek-V3', 'LLM', 'OpenAI兼容', '流式计费', 'MoE'],
+    cluster: 'domestic-v1',
+    path_pattern: '/v1/chat/completions',
+    methods: ['POST'],
+    price_base_units: 0,
+    route_type: 'llm',
+    model_name: 'deepseek-chat',
+    pricing_type: 'per_token',
+    prompt_token_price_base_units: 1000, // 0.10 分 / 1k Tokens
+    completion_token_price_base_units: 2000, // 0.20 分 / 1k Tokens
+    asset: 'Credits',
+    allowed_payment_methods: 'wallet',
+    rate_limit_rpm: 3000,
+    timeout_ms: 60000,
+    status: 'active',
+    sla: {
+      success_rate_24h: 99.98,
+      p95_latency_ms: 380,
+      paid_calls_24h: 185200,
+      total_calls: 1420000,
+      health_status: 'healthy',
+    },
+    parameters: [
+      {
+        name: 'model',
+        type: 'string',
+        required: true,
+        description: '模型标识名，固定传入 "deepseek-chat"',
+        example: '"deepseek-chat"',
+      },
+      {
+        name: 'messages',
+        type: 'array of message objects',
+        required: true,
+        description: '对话上下文列表，每项包含 role ("system" | "user" | "assistant") 与 content',
+        example: '[{"role":"user","content":"你好"}]',
+      },
+      {
+        name: 'stream',
+        type: 'boolean',
+        required: false,
+        description: '是否开启 SSE 流式输出，开启后按实际 Token 毫秒级扣费',
+        example: 'true',
+      },
+      {
+        name: 'temperature',
+        type: 'number (0.0 - 2.0)',
+        required: false,
+        description: '采样温度，默认 0.7',
+        example: '0.7',
+      },
+      {
+        name: 'max_tokens',
+        type: 'integer',
+        required: false,
+        description: '单次回答最大生成 Token 数量',
+        example: '4096',
+      },
+    ],
+    sample_params: {
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: '你好，请做个简短的自我介绍。' },
+      ],
+      stream: true,
+    },
+    sample_response: {
+      id: 'chatcmpl-deepseek-9a8b7c',
+      object: 'chat.completion.chunk',
+      created: 1729500000,
+      model: 'deepseek-chat',
+      choices: [
+        {
+          index: 0,
+          delta: { content: '你好！我是 DeepSeek-V3...' },
+          finish_reason: null,
+        },
+      ],
+      usage: {
+        prompt_tokens: 18,
+        completion_tokens: 56,
+        total_tokens: 74,
+      },
+    },
+    description_md: `### 功能定义 (Overview)
+**DeepSeek-V3 高性能大模型对话接口** 专为大语言模型应用与智能体打造，全面遵循官方 OpenAI 格式标准。无论是直接通过 \`openai\` 官方 SDK 调用，还是通过 LangChain、AutoGPT、LlamaIndex 等框架接入，只需修改 \`base_url\` 与 \`api_key\` 即可实现 0 代码成本平滑迁移。
+
+### 为什么选择 AgentFinOps 大模型流式网关？
+- **透明精准的千 Token 计费**：输入仅需 **0.10 分 / 1k Tokens**，输出仅需 **0.20 分 / 1k Tokens**。杜绝任何预付巨额年费或账户隐蔽扣费。
+- **毫秒级断流预算保护 (Streaming Budget Guard)**：当客户端断开连接或达到配额阈值，网关立刻停止向上游模型请求并瞬间冻结计费，绝不多扣 1 个 Token。
+- **免密快速体验**：在商店首页点击“一键申领测试 Key”，立即可在本地直接运行完整的 Python/Node.js 代码！`,
+    created_at: 1729510000,
+    updated_at: 1729750000,
+  },
+  {
     route_id: 'rte_smart_money_01',
     tenant_id: 'ten_quant_alpha',
     provider_name: '智融量化 (AlphaQuant Labs)',
@@ -99,9 +203,14 @@ export const SEED_MARKETPLACE_ROUTES: MarketplaceRouteItem[] = [
     category: 'AI & LLM',
     tags: ['DeepSeek-R1', 'LLM Reasoning', 'TEE Verified', 'Code Audit'],
     cluster: 'domestic-v1',
-    path_pattern: '/v1/llm/deepseek-r1/chat',
+    path_pattern: '/v1/chat/completions',
     methods: ['POST'],
-    price_base_units: 5000, // 0.005 Credits
+    price_base_units: 0,
+    route_type: 'llm',
+    model_name: 'deepseek-reasoner',
+    pricing_type: 'per_token',
+    prompt_token_price_base_units: 4000, // 0.40 分 / 1k Tokens
+    completion_token_price_base_units: 16000, // 1.60 分 / 1k Tokens
     asset: 'Credits',
     allowed_payment_methods: 'wallet',
     rate_limit_rpm: 600,

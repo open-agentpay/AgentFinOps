@@ -6,6 +6,8 @@ import {
   Activity,
   AlertCircle,
   ArrowLeft,
+  Bot,
+  BrainCircuit,
   CheckCircle2,
   Clock,
   Code2,
@@ -26,11 +28,17 @@ import {
   PUBLIC_GATEWAY_URL,
   PUBLIC_SITE_URL,
   buildAnswerFirstTldr,
+  buildCurlLlmSnippet,
   buildMcpConfigSnippet,
+  buildOpenAiNodeSdkSnippet,
+  buildOpenAiPythonSdkSnippet,
   buildPythonSdkSnippet,
   buildTypescriptSdkSnippet,
   formatClusterLabel,
   formatCreditsPrice,
+  formatTokenPriceFen,
+  getLlmModelName,
+  isLlmRoute,
 } from '@/lib/marketplace';
 import {
   TrialKeyInfo,
@@ -98,7 +106,12 @@ interface RouteDetailViewProps {
 
 export function RouteDetailView({ route, relatedRoutes }: RouteDetailViewProps) {
   const { t, locale } = useI18n();
-  const [sdkLang, setSdkLang] = useState<'python' | 'typescript' | 'mcp'>('python');
+  const isLlm = isLlmRoute(route);
+  const llmModelName = getLlmModelName(route);
+  const promptTokenPriceFen = formatTokenPriceFen(route.prompt_token_price_base_units ?? 1000);
+  const completionTokenPriceFen = formatTokenPriceFen(route.completion_token_price_base_units ?? 2000);
+
+  const [sdkLang, setSdkLang] = useState<string>(isLlm ? 'openai_python' : 'python');
   const [mcpPlatform, setMcpPlatform] = useState<'workbuddy' | 'claude_cursor' | 'sdk'>('workbuddy');
 
   const [trialKeyInfo, setTrialKeyInfo] = useState<TrialKeyInfo | null>(null);
@@ -141,21 +154,53 @@ export function RouteDetailView({ route, relatedRoutes }: RouteDetailViewProps) 
   const priceStr = formatCreditsPrice(route.price_base_units);
   const clusterLabel = formatClusterLabel(route.cluster);
   const tldr = buildAnswerFirstTldr(route, locale);
+
+  const openAiPythonSnippet = buildOpenAiPythonSdkSnippet(route, locale, activeApiKey);
+  const openAiNodeSnippet = buildOpenAiNodeSdkSnippet(route, locale, activeApiKey);
+  const curlLlmSnippet = buildCurlLlmSnippet(route, locale, activeApiKey);
   const pythonSnippet = buildPythonSdkSnippet(route, locale, activeApiKey);
   const tsSnippet = buildTypescriptSdkSnippet(route, locale, activeApiKey);
   const mcpSnippet = buildMcpConfigSnippet(route, mcpPlatform, activeApiKey);
-  const activeSnippet =
-    sdkLang === 'python' ? pythonSnippet : sdkLang === 'typescript' ? tsSnippet : mcpSnippet;
-  const activeInstallCmd =
-    sdkLang === 'python'
-      ? 'pip install agentpay-core-sdk'
-      : sdkLang === 'typescript'
-      ? 'npm install agentpay-core-sdk'
-      : mcpPlatform === 'workbuddy'
-      ? 'cat ~/.workbuddy/mcp.json'
-      : mcpPlatform === 'claude_cursor'
-      ? 'cat ~/.config/claude/claude_desktop_config.json'
-      : 'npm install agentpay-core-sdk';
+
+  let activeSnippet = pythonSnippet;
+  let activeInstallCmd = 'pip install agentpay-core-sdk';
+
+  if (isLlm) {
+    if (sdkLang === 'openai_python') {
+      activeSnippet = openAiPythonSnippet;
+      activeInstallCmd = 'pip install openai';
+    } else if (sdkLang === 'openai_node') {
+      activeSnippet = openAiNodeSnippet;
+      activeInstallCmd = 'npm install openai';
+    } else if (sdkLang === 'curl') {
+      activeSnippet = curlLlmSnippet;
+      activeInstallCmd = `curl -N -X POST "${PUBLIC_GATEWAY_URL}/v1/chat/completions"`;
+    } else if (sdkLang === 'mcp') {
+      activeSnippet = mcpSnippet;
+      activeInstallCmd =
+        mcpPlatform === 'workbuddy'
+          ? 'cat ~/.workbuddy/mcp.json'
+          : mcpPlatform === 'claude_cursor'
+          ? 'cat ~/.config/claude/claude_desktop_config.json'
+          : 'npm install agentpay-core-sdk';
+    } else {
+      activeSnippet = pythonSnippet;
+      activeInstallCmd = 'pip install agentpay-core-sdk';
+    }
+  } else {
+    activeSnippet =
+      sdkLang === 'python' ? pythonSnippet : sdkLang === 'typescript' ? tsSnippet : mcpSnippet;
+    activeInstallCmd =
+      sdkLang === 'python'
+        ? 'pip install agentpay-core-sdk'
+        : sdkLang === 'typescript'
+        ? 'npm install agentpay-core-sdk'
+        : mcpPlatform === 'workbuddy'
+        ? 'cat ~/.workbuddy/mcp.json'
+        : mcpPlatform === 'claude_cursor'
+        ? 'cat ~/.config/claude/claude_desktop_config.json'
+        : 'npm install agentpay-core-sdk';
+  }
   const mcpSseUrl = `${PUBLIC_GATEWAY_URL}/v1/mcp/sse?route_id=${route.route_id || route.slug}`;
   const mcpCliCmd = `npx agentpay-cli mcp add --name ${route.slug || 'tool'} --url "${mcpSseUrl}" --key ${activeApiKey}`;
   const fullEndpoint = `${PUBLIC_GATEWAY_URL}${route.path_pattern}`;
@@ -193,12 +238,23 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800/90 dark:bg-gradient-to-b dark:from-slate-900/90 dark:to-[#090E1C] dark:shadow-2xl sm:p-10 transition-colors duration-200">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2.5">
+            {isLlm && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 px-3 py-1 text-xs font-bold text-purple-700 dark:text-purple-300 shadow-sm">
+                <BrainCircuit className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                <span>LLM 大模型</span>
+              </span>
+            )}
             <span className="rounded-lg border border-indigo-500/30 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
               {categoryLabel}
             </span>
             <span className="rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300">
               {(route.methods || ['GET'])[0]} {route.path_pattern}
             </span>
+            {isLlm && (
+              <span className="rounded-lg border border-purple-500/30 bg-purple-50 px-2.5 py-1 font-mono text-xs font-semibold text-purple-700 dark:border-purple-800/60 dark:bg-purple-950/40 dark:text-purple-300">
+                model: {llmModelName}
+              </span>
+            )}
             <span className="text-xs text-slate-500 dark:text-slate-400">
               {t.detail.provider} <strong className="text-slate-900 dark:text-slate-200">{route.provider_name}</strong>
             </span>
@@ -239,21 +295,63 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
 
         {/* Key Price & Live Gateway SLA Metrics Grid */}
         <div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <Zap className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-              <span>{t.detail.pricePerCall}</span>
+          {isLlm ? (
+            <div className="col-span-2 rounded-2xl border border-purple-500/30 bg-purple-50/60 p-4 shadow-sm dark:border-purple-500/30 dark:bg-purple-950/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-purple-700 dark:text-purple-300">
+                  <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                  <span>千 Tokens 毫秒级流式定价</span>
+                </div>
+                <span className="rounded-md bg-purple-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-purple-800 dark:bg-purple-900/60 dark:text-purple-200">
+                  无月租 · 按量实收
+                </span>
+              </div>
+              <div className="mt-2.5 grid grid-cols-2 gap-3 border-t border-purple-200/70 pt-2.5 dark:border-purple-800/50">
+                <div>
+                  <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">输入 (Prompt)</div>
+                  <div className="mt-1 flex items-baseline gap-1">
+                    <span className="font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
+                      {promptTokenPriceFen}
+                    </span>
+                    <span className="font-mono text-xs font-semibold text-purple-600 dark:text-purple-400">
+                      分 / 1k Tokens
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">输出 (Completion)</div>
+                  <div className="mt-1 flex items-baseline gap-1">
+                    <span className="font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
+                      {completionTokenPriceFen}
+                    </span>
+                    <span className="font-mono text-xs font-semibold text-purple-600 dark:text-purple-400">
+                      分 / 1k Tokens
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 border-t border-purple-200/40 pt-2 dark:border-purple-800/30">
+                <span>{clusterLabel}</span>
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">⚡ 毫秒级断流保护，绝不多扣 1 个 Token</span>
+              </div>
             </div>
-            <div className="mt-1.5 flex items-baseline gap-1.5">
-              <span className="font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
-                {priceStr}
-              </span>
-              <span className="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                Credits / req
-              </span>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <Zap className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                <span>{t.detail.pricePerCall}</span>
+              </div>
+              <div className="mt-1.5 flex items-baseline gap-1.5">
+                <span className="font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
+                  {priceStr}
+                </span>
+                <span className="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                  Credits / req
+                </span>
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">{clusterLabel}</div>
             </div>
-            <div className="mt-1 text-[11px] text-slate-500">{clusterLabel}</div>
-          </div>
+          )}
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/70">
             <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
@@ -460,43 +558,119 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
 
               <div className="flex flex-wrap items-center gap-2">
                 <div className="inline-flex rounded-lg border border-slate-700 bg-slate-950 p-0.5 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setSdkLang('python')}
-                    className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
-                      sdkLang === 'python'
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Python
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSdkLang('typescript')}
-                    className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
-                      sdkLang === 'typescript'
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    TypeScript
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSdkLang('mcp')}
-                    className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
-                      sdkLang === 'mcp'
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {t.detail.mcpTabLabel}
-                  </button>
+                  {isLlm ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setSdkLang('openai_python')}
+                        className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
+                          sdkLang === 'openai_python'
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        OpenAI Python
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSdkLang('openai_node')}
+                        className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
+                          sdkLang === 'openai_node'
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        OpenAI Node.js
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSdkLang('curl')}
+                        className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
+                          sdkLang === 'curl'
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        cURL 流式
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSdkLang('mcp')}
+                        className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
+                          sdkLang === 'mcp'
+                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {t.detail.mcpTabLabel}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSdkLang('agentpay')}
+                        className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
+                          sdkLang === 'agentpay'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        策略防火墙
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setSdkLang('python')}
+                        className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
+                          sdkLang === 'python'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Python
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSdkLang('typescript')}
+                        className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
+                          sdkLang === 'typescript'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        TypeScript
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSdkLang('mcp')}
+                        className={`rounded-md px-2.5 py-1 font-mono font-medium transition ${
+                          sdkLang === 'mcp'
+                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-sm'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {t.detail.mcpTabLabel}
+                      </button>
+                    </>
+                  )}
                 </div>
                 <CopyButton text={activeSnippet} label={t.detail.copySdkCode} />
               </div>
             </div>
+
+            {isLlm && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-purple-500/30 bg-purple-950/20 px-3.5 py-2.5 text-xs text-purple-200">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-purple-400 shrink-0" />
+                  <span>
+                    <strong>OpenAI 官方 SDK 原生兼容</strong>：设置 <code>base_url=&quot;{PUBLIC_GATEWAY_URL}/v1&quot;</code> 与 <code>api_key</code> 即可直接调用，开箱支持 SSE 打字机流式输出。
+                  </span>
+                </div>
+                <span className="font-mono text-purple-300 bg-purple-900/60 px-2 py-0.5 rounded text-[11px] border border-purple-700/50">
+                  model: {llmModelName}
+                </span>
+              </div>
+            )}
 
             {sdkLang === 'mcp' && (
               <div className="mt-4 space-y-3">
@@ -571,8 +745,14 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
                   <CopyButton text={activeInstallCmd} />
                 </div>
                 <span className="font-mono text-indigo-300">
-                  {sdkLang === 'python'
-                    ? 'Python 3.10+'
+                  {sdkLang === 'openai_python'
+                    ? 'Python 3.8+ / openai >= 1.0.0'
+                    : sdkLang === 'openai_node'
+                    ? 'Node.js 18+ / openai >= 4.0.0'
+                    : sdkLang === 'curl'
+                    ? 'Bash / zsh / cURL (HTTP SSE)'
+                    : sdkLang === 'python' || sdkLang === 'agentpay'
+                    ? 'Python 3.10+ (策略防火墙)'
                     : sdkLang === 'typescript'
                     ? 'Node.js 20+ / TypeScript'
                     : mcpPlatform === 'workbuddy'

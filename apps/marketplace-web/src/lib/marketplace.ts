@@ -33,6 +33,48 @@ export function formatCreditsPrice(baseUnits: number): string {
 }
 
 /**
+ * Checks whether the given route is an LLM / Generative AI route.
+ */
+export function isLlmRoute(route: MarketplaceRouteItem): boolean {
+  if (!route) return false;
+  return (
+    route.route_type === 'llm' ||
+    route.pricing_type === 'per_token' ||
+    (route.category === 'AI & LLM' && (Boolean(route.model_name) || route.path_pattern.includes('/chat') || route.path_pattern.includes('/llm')))
+  );
+}
+
+/**
+ * Resolves the primary LLM model identifier for chat/completions.
+ */
+export function getLlmModelName(route: MarketplaceRouteItem): string {
+  if (route.model_name && route.model_name.trim()) {
+    return route.model_name.trim();
+  }
+  // Fallbacks inferred from slug or title
+  const slug = (route.slug || '').toLowerCase();
+  if (slug.includes('deepseek-r1') || slug.includes('reasoner')) return 'deepseek-reasoner';
+  if (slug.includes('deepseek')) return 'deepseek-chat';
+  if (slug.includes('qwen')) return 'qwen-plus';
+  if (slug.includes('gpt-4o')) return 'gpt-4o';
+  return route.slug || 'llm-chat';
+}
+
+/**
+ * Formats token pricing base units into human-readable Fen per 1,000 tokens (分 / 1k Tokens).
+ * Guaranteed strictly in "分" (no "微" units).
+ * 1 CNY = 100 分 = 1,000,000 base_units => 10,000 base_units = 1 分.
+ */
+export function formatTokenPriceFen(baseUnits?: number): string {
+  if (baseUnits === undefined || baseUnits === null) return '0.00';
+  const fen = baseUnits / 10_000;
+  if (fen > 0 && fen < 0.01) {
+    return fen.toFixed(4);
+  }
+  return fen.toFixed(2);
+}
+
+/**
  * Maps cluster identifiers to human-readable cluster labels.
  */
 export function formatClusterLabel(cluster?: string, fallback?: string): string {
@@ -47,8 +89,21 @@ export function buildAnswerFirstTldr(
   route: MarketplaceRouteItem,
   _locale: string = 'zh'
 ): string {
-  const priceStr = formatCreditsPrice(route.price_base_units);
   const clusterLabel = formatClusterLabel(route.cluster);
+
+  if (isLlmRoute(route)) {
+    const model = getLlmModelName(route);
+    const promptFen = formatTokenPriceFen(route.prompt_token_price_base_units ?? 1000);
+    const completionFen = formatTokenPriceFen(route.completion_token_price_base_units ?? 2000);
+    const baseSummary =
+      route.summary ||
+      route.description_md.split('\n').find((line) => line.trim() && !line.trim().startsWith('#')) ||
+      `${route.title} 提供面向 AI Agent 的高质量大模型推理与流式对话服务。`;
+
+    return `${baseSummary} 采用 OpenAI 标准兼容接口协议（/v1/chat/completions，模型名：${model}），支持毫秒级千 Token 流式按需计费（输入：${promptFen} 分/1k Tokens，输出：${completionFen} 分/1k Tokens，${clusterLabel}）。无缝兼容主流官方 OpenAI SDK 与 LangChain、LlamaIndex 等智能体框架，配合策略防火墙实现自动断流预算保护与即用即结。`;
+  }
+
+  const priceStr = formatCreditsPrice(route.price_base_units);
   const defaultSummaryZh = `${route.title} 提供面向 AI Agent 的标准化接口服务。`;
 
   const baseSummary =
@@ -57,6 +112,112 @@ export function buildAnswerFirstTldr(
     defaultSummaryZh;
 
   return `${baseSummary} 支持企业级配额核销与计费（${clusterLabel}），单次调用价格为 ${priceStr} Credits/req，支持通过 AgentFinOps SDK 免繁琐开户流程，配合策略引擎实现调用即结算。`;
+}
+
+/**
+ * Generates official OpenAI Python SDK snippet for LLM routes.
+ */
+export function buildOpenAiPythonSdkSnippet(
+  route: MarketplaceRouteItem,
+  _locale: string = 'zh',
+  activeApiKey?: string
+): string {
+  const effectiveKey = activeApiKey || 'apk_live_your_api_key';
+  const modelName = getLlmModelName(route);
+
+  return `import os
+from openai import OpenAI
+
+# 1. 统一接入 AgentFinOps 网关，无缝兼容 OpenAI 官方 Python SDK (pip install openai)
+client = OpenAI(
+    base_url="${PUBLIC_GATEWAY_URL}/v1",  # 网关 OpenAI 兼容入口
+    api_key=os.getenv("AGENT_API_KEY", "${effectiveKey}"),  # 平台 API Key 或一键申领测试 Key
+)
+
+# 2. 发起流式推理，按实际产生 Token 毫秒级计费
+response = client.chat.completions.create(
+    model="${modelName}",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "你好，请简要介绍一下你具备的核心能力。"},
+    ],
+    temperature=0.7,
+    stream=True,  # 启用 SSE 流式输出，实时计费核销
+)
+
+# 3. 消费流式响应块 (Token SSE Chunks)
+print(">>> AI 回复:")
+for chunk in response:
+    delta = chunk.choices[0].delta.content or ""
+    print(delta, end="", flush=True)
+print()`;
+}
+
+/**
+ * Generates official OpenAI Node.js / TypeScript SDK snippet for LLM routes.
+ */
+export function buildOpenAiNodeSdkSnippet(
+  route: MarketplaceRouteItem,
+  _locale: string = 'zh',
+  activeApiKey?: string
+): string {
+  const effectiveKey = activeApiKey || 'apk_live_your_api_key';
+  const modelName = getLlmModelName(route);
+
+  return `import OpenAI from 'openai';
+
+// 1. 初始化 OpenAI 官方客户端 (npm install openai)，指向 AgentFinOps 网关
+const client = new OpenAI({
+  baseURL: '${PUBLIC_GATEWAY_URL}/v1',
+  apiKey: process.env.AGENT_API_KEY ?? '${effectiveKey}',
+});
+
+async function main() {
+  // 2. 发起流式对话，网关实时按千 Token 核销扣款
+  const stream = await client.chat.completions.create({
+    model: '${modelName}',
+    messages: [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: '你好，请简要介绍一下你具备的核心能力。' },
+    ],
+    temperature: 0.7,
+    stream: true,
+  });
+
+  // 3. 实时输出流式 Token
+  process.stdout.write('>>> AI 回复: ');
+  for await (const chunk of stream) {
+    const text = chunk.choices[0]?.delta?.content || '';
+    process.stdout.write(text);
+  }
+  process.stdout.write('\\n');
+}
+
+main().catch(console.error);`;
+}
+
+/**
+ * Generates cURL SSE streaming request for LLM routes.
+ */
+export function buildCurlLlmSnippet(
+  route: MarketplaceRouteItem,
+  _locale: string = 'zh',
+  activeApiKey?: string
+): string {
+  const effectiveKey = activeApiKey || 'apk_live_your_api_key';
+  const modelName = getLlmModelName(route);
+
+  return `# 1. 终端流式直连测试 (SSE data chunks)
+curl -N -X POST "${PUBLIC_GATEWAY_URL}/v1/chat/completions" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${effectiveKey}" \\
+  -d '{
+    "model": "${modelName}",
+    "messages": [
+      {"role": "user", "content": "你好，请做个简短的自我介绍。"}
+    ],
+    "stream": true
+  }'`;
 }
 
 /**
@@ -277,11 +438,17 @@ console.log('Result:', result);`;
  * Generates pure Markdown documentation for a single route (used by /llms.txt and AI Bot content negotiation).
  */
 export function buildRouteMarkdownDoc(route: MarketplaceRouteItem): string {
-  const priceStr = formatCreditsPrice(route.price_base_units);
+  const isLlm = isLlmRoute(route);
+  const promptFen = formatTokenPriceFen(route.prompt_token_price_base_units ?? 1000);
+  const completionFen = formatTokenPriceFen(route.completion_token_price_base_units ?? 2000);
+  const priceDisplay = isLlm
+    ? `输入: ${promptFen} 分/1k Tokens | 输出: ${completionFen} 分/1k Tokens (流式计费)`
+    : `${formatCreditsPrice(route.price_base_units)} Credits / request`;
+
   const clusterLabel = formatClusterLabel(route.cluster);
   const tldr = buildAnswerFirstTldr(route);
-  const sdkCode = buildPythonSdkSnippet(route);
-  const tsSdkCode = buildTypescriptSdkSnippet(route);
+  const sdkCode = isLlm ? buildOpenAiPythonSdkSnippet(route) : buildPythonSdkSnippet(route);
+  const tsSdkCode = isLlm ? buildOpenAiNodeSdkSnippet(route) : buildTypescriptSdkSnippet(route);
 
   const effectiveSampleParams =
     route.sample_params && Object.keys(route.sample_params).length > 0
@@ -340,7 +507,7 @@ export function buildRouteMarkdownDoc(route: MarketplaceRouteItem): string {
 | **Gateway Endpoint** | \`${PUBLIC_GATEWAY_URL}${route.path_pattern}\` |
 | **Route Slug** | \`${route.slug}\` |
 | **HTTP Methods** | \`${(route.methods || ['GET', 'POST']).join(', ')}\` |
-| **Price** | \`${priceStr} Credits / request\` |
+| **Price** | \`${priceDisplay}\` |
 | **Settlement Cluster** | \`${clusterLabel}\` |
 | **24h 200 OK Success Rate** | \`${route.sla.success_rate_24h}%\` |
 | **P95 Latency** | \`${route.sla.p95_latency_ms} ms\` |
