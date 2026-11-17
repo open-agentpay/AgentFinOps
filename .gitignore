@@ -138,6 +138,7 @@ docs/zh/specs/adr/
 
 # Agent skills & local assistant configs
 .agents/
+.claude/
 skills-lock.json
 
 # Next.js build output

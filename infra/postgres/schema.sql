@@ -453,6 +453,9 @@ CREATE TABLE IF NOT EXISTS ap_usage_event (
     asset VARCHAR(16) NOT NULL DEFAULT 'CNY',
     payment_method VARCHAR(32) NOT NULL DEFAULT 'wallet',
     is_success BOOLEAN NOT NULL,
+    prompt_tokens BIGINT NOT NULL DEFAULT 0,
+    completion_tokens BIGINT NOT NULL DEFAULT 0,
+    total_tokens BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -309,8 +309,10 @@ const createForm = reactive({
   route_type: 'api' as RouteType,
   model_name: '',
   pricing_type: 'fixed' as PricingType,
-  prompt_token_price_credits: 0.001,
-  completion_token_price_credits: 0.002,
+  prompt_token_price_fen: 1.0,
+  completion_token_price_fen: 2.0,
+  prompt_token_price_credits: 0.01,
+  completion_token_price_credits: 0.02,
   slug: '',
   title: '',
   summary: '',
@@ -340,8 +342,10 @@ function openCreateDialog() {
   createForm.route_type = 'api';
   createForm.model_name = '';
   createForm.pricing_type = 'fixed';
-  createForm.prompt_token_price_credits = 0.001;
-  createForm.completion_token_price_credits = 0.002;
+  createForm.prompt_token_price_fen = 1.0;
+  createForm.completion_token_price_fen = 2.0;
+  createForm.prompt_token_price_credits = 0.01;
+  createForm.completion_token_price_credits = 0.02;
   createForm.slug = '';
   createForm.title = '';
   createForm.summary = '';
@@ -447,8 +451,8 @@ async function handleCreateRoute() {
         }))
         .filter((p) => p.name !== '');
 
-      const promptUnits = Math.round(createForm.prompt_token_price_credits * 1000000);
-      const completionUnits = Math.round(createForm.completion_token_price_credits * 1000000);
+      const promptUnits = Math.round(Number(createForm.prompt_token_price_fen || 1) * 10000);
+      const completionUnits = Math.round(Number(createForm.completion_token_price_fen || 2) * 10000);
 
       const payload: CreateRoutePayload = {
         project_id: createForm.project_id,
@@ -507,8 +511,10 @@ const editForm = reactive({
   route_type: 'api' as RouteType,
   model_name: '',
   pricing_type: 'fixed' as PricingType,
-  prompt_token_price_credits: 0.001,
-  completion_token_price_credits: 0.002,
+  prompt_token_price_fen: 1.0,
+  completion_token_price_fen: 2.0,
+  prompt_token_price_credits: 0.01,
+  completion_token_price_credits: 0.02,
   slug: '',
   title: '',
   summary: '',
@@ -614,8 +620,17 @@ function openEditDialog(route: Route) {
   editForm.route_type = route.route_type || 'api';
   editForm.model_name = route.model_name || '';
   editForm.pricing_type = route.pricing_type || (route.route_type === 'llm' ? 'per_token' : 'fixed');
-  editForm.prompt_token_price_credits = (route.prompt_token_price_base_units || route.price_base_units || (route.route_type === 'llm' ? 1000 : 0)) / 1000000;
-  editForm.completion_token_price_credits = (route.completion_token_price_base_units || (route.prompt_token_price_base_units ? route.prompt_token_price_base_units * 2 : route.price_base_units ? route.price_base_units * 2 : (route.route_type === 'llm' ? 2000 : 0))) / 1000000;
+  const rawPromptUnits = route.prompt_token_price_base_units && route.prompt_token_price_base_units > 0
+    ? route.prompt_token_price_base_units
+    : (route.price_base_units && route.price_base_units > 0 ? route.price_base_units : (route.route_type === 'llm' ? 10000 : 0));
+  const rawCompletionUnits = route.completion_token_price_base_units && route.completion_token_price_base_units > 0
+    ? route.completion_token_price_base_units
+    : (rawPromptUnits ? rawPromptUnits * 2 : (route.route_type === 'llm' ? 20000 : 0));
+  
+  editForm.prompt_token_price_fen = Number((rawPromptUnits / 10000).toFixed(2));
+  editForm.completion_token_price_fen = Number((rawCompletionUnits / 10000).toFixed(2));
+  editForm.prompt_token_price_credits = rawPromptUnits / 1000000;
+  editForm.completion_token_price_credits = rawCompletionUnits / 1000000;
   editForm.slug = route.slug || '';
   editForm.title = route.title || '';
   editForm.summary = route.summary || '';
@@ -699,8 +714,8 @@ async function handleUpdateRoute() {
         }))
         .filter((p) => p.name !== '');
 
-      const promptUnits = Math.round(editForm.prompt_token_price_credits * 1000000);
-      const completionUnits = Math.round(editForm.completion_token_price_credits * 1000000);
+      const promptUnits = Math.round(Number(editForm.prompt_token_price_fen || 1) * 10000);
+      const completionUnits = Math.round(Number(editForm.completion_token_price_fen || 2) * 10000);
 
       const payload: UpdateRoutePayload = {
         project_id: editForm.project_id,
@@ -1047,8 +1062,9 @@ function copyToClipboard(text: string) {
         <el-table-column :label="$t('计费定价策略')" width="220">
           <template #default="{ row }">
             <div v-if="row.route_type === 'llm' || row.pricing_type === 'per_token'" style="font-size: 12px; line-height: 1.4">
-              <div class="text-muted">{{ $t('输入') }}: {{ tenantStore.currencySymbol }} {{ ((row.prompt_token_price_base_units || 0) / 1000000).toFixed(4) }} / 1k</div>
-              <div class="text-muted">{{ $t('输出') }}: {{ tenantStore.currencySymbol }} {{ ((row.completion_token_price_base_units || 0) / 1000000).toFixed(4) }} / 1k</div>
+              <div class="text-primary font-bold" style="margin-bottom: 2px;">{{ $t('Token 流式计费') }}</div>
+              <div class="text-muted">{{ $t('输入') }}: {{ ((row.prompt_token_price_base_units || 0) / 10000).toFixed(2) }} {{ $t('分 / 1k Tokens') }}</div>
+              <div class="text-muted">{{ $t('输出') }}: {{ ((row.completion_token_price_base_units || 0) / 10000).toFixed(2) }} {{ $t('分 / 1k Tokens') }}</div>
             </div>
             <span v-else class="price-text">
               {{ tenantStore.currencySymbol }} {{ (row.price_base_units / 1000000).toFixed(2) }} {{ tenantStore.currentCurrency }}
@@ -1502,35 +1518,41 @@ function copyToClipboard(text: string) {
             </el-radio-group>
           </el-form-item>
 
-          <!-- 流式 Token 计费配置 (独立两列卡片，自适应宽度且无 label 挤压) -->
+          <!-- 流式 Token 计费配置 (独立两列卡片，以分/1k Tokens为直观单位) -->
           <template v-if="createForm.route_type === 'llm' && createForm.pricing_type === 'per_token'">
             <div class="llm-token-pricing-box">
               <div class="pricing-col">
-                <div class="pricing-label">{{ $t('输入单价 (Prompt)') }}</div>
+                <div class="pricing-label">
+                  <span>{{ $t('输入单价 (Prompt)') }}</span>
+                  <span class="unit-badge">{{ $t('分 / 1k Tokens') }}</span>
+                </div>
                 <el-input-number
-                  v-model="createForm.prompt_token_price_credits"
+                  v-model="createForm.prompt_token_price_fen"
                   :min="0"
-                  :step="0.0005"
-                  :precision="6"
+                  :step="0.1"
+                  :precision="2"
                   controls-position="right"
                   style="width: 100%"
                 />
                 <div class="pricing-tag">
-                  ≈ {{ ((createForm.prompt_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
+                  ≈ {{ tenantStore.currencySymbol }} {{ (((createForm.prompt_token_price_fen || 0) / 100)).toFixed(4) }} {{ $t('/ 1k Tokens') }}
                 </div>
               </div>
               <div class="pricing-col">
-                <div class="pricing-label">{{ $t('输出单价 (Completion)') }}</div>
+                <div class="pricing-label">
+                  <span>{{ $t('输出单价 (Completion)') }}</span>
+                  <span class="unit-badge">{{ $t('分 / 1k Tokens') }}</span>
+                </div>
                 <el-input-number
-                  v-model="createForm.completion_token_price_credits"
+                  v-model="createForm.completion_token_price_fen"
                   :min="0"
-                  :step="0.001"
-                  :precision="6"
+                  :step="0.1"
+                  :precision="2"
                   controls-position="right"
                   style="width: 100%"
                 />
                 <div class="pricing-tag">
-                  ≈ {{ ((createForm.completion_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
+                  ≈ {{ tenantStore.currencySymbol }} {{ (((createForm.completion_token_price_fen || 0) / 100)).toFixed(4) }} {{ $t('/ 1k Tokens') }}
                 </div>
               </div>
             </div>
@@ -1988,35 +2010,41 @@ function copyToClipboard(text: string) {
             </el-radio-group>
           </el-form-item>
 
-          <!-- 流式 Token 计费配置 (独立两列卡片，自适应宽度且无 label 挤压) -->
+          <!-- 流式 Token 计费配置 (独立两列卡片，以分/1k Tokens为直观单位) -->
           <template v-if="editForm.route_type === 'llm' && editForm.pricing_type === 'per_token'">
             <div class="llm-token-pricing-box">
               <div class="pricing-col">
-                <div class="pricing-label">{{ $t('输入单价 (Prompt)') }}</div>
+                <div class="pricing-label">
+                  <span>{{ $t('输入单价 (Prompt)') }}</span>
+                  <span class="unit-badge">{{ $t('分 / 1k Tokens') }}</span>
+                </div>
                 <el-input-number
-                  v-model="editForm.prompt_token_price_credits"
+                  v-model="editForm.prompt_token_price_fen"
                   :min="0"
-                  :step="0.0005"
-                  :precision="6"
+                  :step="0.1"
+                  :precision="2"
                   controls-position="right"
                   style="width: 100%"
                 />
                 <div class="pricing-tag">
-                  ≈ {{ ((editForm.prompt_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
+                  ≈ {{ tenantStore.currencySymbol }} {{ (((editForm.prompt_token_price_fen || 0) / 100)).toFixed(4) }} {{ $t('/ 1k Tokens') }}
                 </div>
               </div>
               <div class="pricing-col">
-                <div class="pricing-label">{{ $t('输出单价 (Completion)') }}</div>
+                <div class="pricing-label">
+                  <span>{{ $t('输出单价 (Completion)') }}</span>
+                  <span class="unit-badge">{{ $t('分 / 1k Tokens') }}</span>
+                </div>
                 <el-input-number
-                  v-model="editForm.completion_token_price_credits"
+                  v-model="editForm.completion_token_price_fen"
                   :min="0"
-                  :step="0.001"
-                  :precision="6"
+                  :step="0.1"
+                  :precision="2"
                   controls-position="right"
                   style="width: 100%"
                 />
                 <div class="pricing-tag">
-                  ≈ {{ ((editForm.completion_token_price_credits || 0) * 100).toFixed(4).replace(/\.?0+$/, '') }} {{ $t('分 / 1k Tokens') }}
+                  ≈ {{ tenantStore.currencySymbol }} {{ (((editForm.completion_token_price_fen || 0) / 100)).toFixed(4) }} {{ $t('/ 1k Tokens') }}
                 </div>
               </div>
             </div>
@@ -2259,9 +2287,21 @@ function copyToClipboard(text: string) {
   gap: 6px;
 }
 .pricing-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 13px;
   font-weight: 600;
   color: #334155;
+}
+.unit-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4f46e5;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 .pricing-tag {
   font-size: 12px;

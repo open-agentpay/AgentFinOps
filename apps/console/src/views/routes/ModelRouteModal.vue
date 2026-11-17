@@ -11,7 +11,7 @@ interface ProviderPreset {
   logoText: string;
   badgeBg: string;
   defaultUrl: string;
-  models: { label: string; value: string; promptPrice: number; completionPrice: number }[];
+  models: { label: string; value: string; promptPriceFen: number; completionPriceFen: number }[];
 }
 
 const PROVIDER_PRESETS: ProviderPreset[] = [
@@ -23,8 +23,8 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
     badgeBg: '#1e40af',
     defaultUrl: 'https://api.deepseek.com',
     models: [
-      { label: 'deepseek-chat (V3)', value: 'deepseek-chat', promptPrice: 1000, completionPrice: 2000 },
-      { label: 'deepseek-reasoner (R1)', value: 'deepseek-reasoner', promptPrice: 4000, completionPrice: 16000 },
+      { label: 'deepseek-chat (V3)', value: 'deepseek-chat', promptPriceFen: 1.0, completionPriceFen: 2.0 },
+      { label: 'deepseek-reasoner (R1)', value: 'deepseek-reasoner', promptPriceFen: 4.0, completionPriceFen: 16.0 },
     ],
   },
   {
@@ -35,9 +35,9 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
     badgeBg: '#ea580c',
     defaultUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     models: [
-      { label: 'qwen-plus', value: 'qwen-plus', promptPrice: 4000, completionPrice: 12000 },
-      { label: 'qwen-turbo', value: 'qwen-turbo', promptPrice: 2000, completionPrice: 6000 },
-      { label: 'qwen-max', value: 'qwen-max', promptPrice: 20000, completionPrice: 60000 },
+      { label: 'qwen-plus', value: 'qwen-plus', promptPriceFen: 0.4, completionPriceFen: 1.2 },
+      { label: 'qwen-turbo', value: 'qwen-turbo', promptPriceFen: 0.2, completionPriceFen: 0.6 },
+      { label: 'qwen-max', value: 'qwen-max', promptPriceFen: 2.0, completionPriceFen: 6.0 },
     ],
   },
   {
@@ -48,8 +48,8 @@ const PROVIDER_PRESETS: ProviderPreset[] = [
     badgeBg: '#059669',
     defaultUrl: 'https://api.openai.com/v1',
     models: [
-      { label: 'gpt-4o', value: 'gpt-4o', promptPrice: 18000, completionPrice: 72000 },
-      { label: 'gpt-4o-mini', value: 'gpt-4o-mini', promptPrice: 1100, completionPrice: 4400 },
+      { label: 'gpt-4o', value: 'gpt-4o', promptPriceFen: 1.8, completionPriceFen: 7.2 },
+      { label: 'gpt-4o-mini', value: 'gpt-4o-mini', promptPriceFen: 0.15, completionPriceFen: 0.6 },
     ],
   },
   {
@@ -92,8 +92,8 @@ const form = reactive({
   model_name: '',
   upstream_url: '',
   api_key: '',
-  prompt_token_price_cny: 0.001,
-  completion_token_price_cny: 0.002,
+  prompt_token_price_fen: 1.0,
+  completion_token_price_fen: 2.0,
   rate_limit_rpm: 600,
   timeout_ms: 60000,
 });
@@ -109,20 +109,14 @@ const currentPreset = computed(() => {
   return PROVIDER_PRESETS.find((p) => p.id === selectedProviderId.value) || PROVIDER_PRESETS[0];
 });
 
-// 计算 Base Units (1 CNY = 100 分 = 1,000,000 base_units，单价以每 1,000 Tokens 计量)
+// 计算 Base Units (1 分 = 10,000 base_units，单价以每 1,000 Tokens 计量)
 const promptBaseUnits = computed(() => {
-  return Math.round((form.prompt_token_price_cny || 0) * 1_000_000);
+  return Math.round((Number(form.prompt_token_price_fen) || 0) * 10000);
 });
 
 const completionBaseUnits = computed(() => {
-  return Math.round((form.completion_token_price_cny || 0) * 1_000_000);
+  return Math.round((Number(form.completion_token_price_fen) || 0) * 10000);
 });
-
-function formatPriceInFen(val: number): string {
-  if (val === undefined || val === null || isNaN(val)) return '0';
-  const fen = val * 100;
-  return fen.toFixed(4).replace(/\.?0+$/, '') || '0';
-}
 
 function selectProvider(preset: ProviderPreset) {
   selectedProviderId.value = preset.id;
@@ -133,14 +127,14 @@ function selectProvider(preset: ProviderPreset) {
     const firstModel = preset.models[0];
     form.model_name = firstModel.value;
     form.title = `${preset.name} - ${firstModel.value}`;
-    form.prompt_token_price_cny = firstModel.promptPrice / 1_000_000;
-    form.completion_token_price_cny = firstModel.completionPrice / 1_000_000;
+    form.prompt_token_price_fen = firstModel.promptPriceFen;
+    form.completion_token_price_fen = firstModel.completionPriceFen;
     isCustomModel.value = false;
   } else {
     form.model_name = '';
     form.title = '';
-    form.prompt_token_price_cny = 0.001;
-    form.completion_token_price_cny = 0.002;
+    form.prompt_token_price_fen = 1.0;
+    form.completion_token_price_fen = 2.0;
     isCustomModel.value = true;
   }
 }
@@ -156,8 +150,8 @@ function onModelSelect(val: string) {
   const found = currentPreset.value.models.find((m) => m.value === val);
   if (found) {
     form.title = `${currentPreset.value.name} - ${found.value}`;
-    form.prompt_token_price_cny = found.promptPrice / 1_000_000;
-    form.completion_token_price_cny = found.completionPrice / 1_000_000;
+    form.prompt_token_price_fen = found.promptPriceFen;
+    form.completion_token_price_fen = found.completionPriceFen;
   }
 }
 
@@ -171,8 +165,10 @@ watch(
         form.title = props.initialRoute.title || '';
         form.model_name = props.initialRoute.model_name || '';
         form.upstream_url = props.initialRoute.upstream_url;
-        form.prompt_token_price_cny = (props.initialRoute.prompt_token_price_base_units || 0) / 1_000_000;
-        form.completion_token_price_cny = (props.initialRoute.completion_token_price_base_units || 0) / 1_000_000;
+        const pUnits = props.initialRoute.prompt_token_price_base_units || 10000;
+        const cUnits = props.initialRoute.completion_token_price_base_units || (pUnits * 2);
+        form.prompt_token_price_fen = Number((pUnits / 10000).toFixed(2));
+        form.completion_token_price_fen = Number((cUnits / 10000).toFixed(2));
         form.rate_limit_rpm = props.initialRoute.rate_limit_rpm || 600;
         form.timeout_ms = props.initialRoute.timeout_ms || 60000;
       } else {
@@ -360,29 +356,29 @@ async function handleSubmit() {
       <div class="pricing-grid">
         <el-form-item :label="t('输入 (Prompt)')" class="compact-item" label-width="110px">
           <el-input-number
-            v-model="form.prompt_token_price_cny"
-            :precision="6"
-            :step="0.0005"
+            v-model="form.prompt_token_price_fen"
+            :precision="2"
+            :step="0.1"
             :min="0"
             controls-position="right"
             style="width: 100%"
           />
           <div class="price-hint">
-            ≈ {{ formatPriceInFen(form.prompt_token_price_cny) }} {{ t('分 / 1k Tokens') }}
+            {{ form.prompt_token_price_fen }} {{ t('分 / 1k Tokens') }} (≈ ¥{{ (((form.prompt_token_price_fen || 0) / 100)).toFixed(4) }})
           </div>
         </el-form-item>
 
         <el-form-item :label="t('输出 (Completion)')" class="compact-item" label-width="110px">
           <el-input-number
-            v-model="form.completion_token_price_cny"
-            :precision="6"
-            :step="0.001"
+            v-model="form.completion_token_price_fen"
+            :precision="2"
+            :step="0.1"
             :min="0"
             controls-position="right"
             style="width: 100%"
           />
           <div class="price-hint">
-            ≈ {{ formatPriceInFen(form.completion_token_price_cny) }} {{ t('分 / 1k Tokens') }}
+            {{ form.completion_token_price_fen }} {{ t('分 / 1k Tokens') }} (≈ ¥{{ (((form.completion_token_price_fen || 0) / 100)).toFixed(4) }})
           </div>
         </el-form-item>
       </div>
