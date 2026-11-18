@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
+import { useI18n } from '@/i18n/context';
 
 interface CopyButtonProps {
   text: string;
@@ -17,8 +18,10 @@ export function CopyButton({
   className = '',
 }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
-  const defaultLabel = '复制代码';
-  const defaultCopiedLabel = '已复制';
+  const { locale } = useI18n();
+
+  const defaultLabel = locale === 'zh' ? '复制代码' : 'Copy Code';
+  const defaultCopiedLabel = locale === 'zh' ? '已复制 (Copied)' : 'Copied!';
 
   async function handleCopy() {
     try {

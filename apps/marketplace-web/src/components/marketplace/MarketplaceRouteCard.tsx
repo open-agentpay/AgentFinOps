@@ -34,8 +34,8 @@ export function MarketplaceRouteCard({
 
   const isLlm = isLlmRoute(route);
   const llmModel = getLlmModelName(route);
-  const promptFen = formatTokenPriceFen(route.prompt_token_price_base_units ?? 10000);
-  const completionFen = formatTokenPriceFen(route.completion_token_price_base_units ?? 20000);
+  const promptFen = formatTokenPriceFen(route.prompt_token_price_base_units ?? 1000);
+  const completionFen = formatTokenPriceFen(route.completion_token_price_base_units ?? 2000);
   const priceCredits = formatCreditsPrice(route.price_base_units);
   const clusterLabel = route.cluster || 'domestic-v1';
   const isHealthy = route.sla?.health_status === 'healthy';
@@ -51,7 +51,7 @@ export function MarketplaceRouteCard({
             {isLlm && (
               <span className="inline-flex items-center gap-1 rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 py-0.5 text-xs font-bold text-purple-700 dark:text-purple-300">
                 <BrainCircuit className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-                <span>LLM 大模型</span>
+                <span>{t.card.llmBadge}</span>
               </span>
             )}
             <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:border-slate-700/80 dark:bg-slate-800/70 dark:text-slate-300">
@@ -164,31 +164,33 @@ export function MarketplaceRouteCard({
         <div className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/60">
           {isLlm ? (
             <>
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 dark:text-purple-300 shrink-0">
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-700 dark:text-purple-300 whitespace-nowrap">
                 <Sparkles className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
-                <span>Token 流式计费</span>
+                <span>{t.card.tokenStreaming}</span>
               </div>
-              <div className="flex items-baseline gap-1 font-mono text-xs shrink-0 [font-variant-numeric:tabular-nums]">
-                <span className="text-[10px] text-slate-500 font-normal">入:</span>
-                <span className="font-bold text-slate-900 dark:text-white">{promptFen}</span>
-                <span className="text-[10px] text-slate-500 font-normal ml-1">出:</span>
-                <span className="font-bold text-slate-900 dark:text-white">{completionFen}</span>
-                <span className="text-xs font-bold text-purple-600 dark:text-purple-400 ml-1">
-                  分 / 1k
+              <div className="flex items-baseline gap-1 font-mono text-xs whitespace-nowrap shrink-0 [font-variant-numeric:tabular-nums]">
+                <div className="flex items-baseline gap-1 font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                  <span className="text-[10px] text-slate-400 font-normal">{t.card.promptShort}:</span>
+                  <span>{promptFen}</span>
+                  <span className="text-[10px] text-slate-400 font-normal ml-0.5">{t.card.completionShort}:</span>
+                  <span>{completionFen}</span>
+                </div>
+                <span className="text-xs font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap shrink-0">
+                  {t.card.fenPer1k}
                 </span>
               </div>
             </>
           ) : (
             <>
-              <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 shrink-0">
+              <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                 <span className="truncate max-w-[120px]">{clusterLabel}</span>
               </div>
-              <div className="flex items-baseline gap-1 font-mono shrink-0 [font-variant-numeric:tabular-nums]">
+              <div className="flex items-baseline gap-1 font-mono whitespace-nowrap shrink-0 [font-variant-numeric:tabular-nums]">
                 <span className="text-base font-extrabold text-slate-900 dark:text-white">
                   {priceCredits}
                 </span>
-                <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 whitespace-nowrap shrink-0">
                   {t.routeCard.perReq}
                 </span>
               </div>
@@ -202,7 +204,7 @@ export function MarketplaceRouteCard({
             type="button"
             onClick={() => onOpenQuickSdk(route.slug)}
             className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:border-indigo-400 hover:bg-white hover:text-indigo-700 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:border-indigo-500/50 dark:hover:bg-slate-800 dark:hover:text-white whitespace-nowrap"
-            title={isLlm ? '查看 OpenAI SDK 接入代码' : '查看 SDK 调用代码'}
+            title={isLlm ? t.card.viewOpenAiCode : t.card.viewSdkCode}
           >
             <Code2
               className={`h-3.5 w-3.5 shrink-0 ${

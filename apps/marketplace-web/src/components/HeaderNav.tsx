@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   ExternalLink,
   Menu,
-  Sparkles,
   Terminal,
   X,
 } from 'lucide-react';
@@ -15,9 +14,11 @@ import {
   PUBLIC_DOCS_URL,
   PUBLIC_GATEWAY_URL,
   PUBLIC_GITHUB_URL,
-  PUBLIC_PLAYGROUND_URL,
+  PUBLIC_TWITTER_URL,
+  PUBLIC_DISCORD_URL,
 } from '@/lib/marketplace';
 import { useI18n } from '@/i18n/context';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
 function GithubIcon({ className = 'h-4 w-4' }: { className?: string }) {
@@ -32,8 +33,25 @@ function GithubIcon({ className = 'h-4 w-4' }: { className?: string }) {
   );
 }
 
+function XIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
+function DiscordIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"
+      />
+    </svg>
+  );
+}
+
 export function HeaderNav() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -47,18 +65,18 @@ export function HeaderNav() {
         {/* Left: Brand Logo & Navigation Links */}
         <div className="flex min-w-0 items-center gap-3 lg:gap-6 xl:gap-8">
           <Link href="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3 group">
-            {/* Real AgentFinOps Official Logo */}
+            {/* Real AgentPay Official Logo */}
             <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-1 shadow-sm transition-transform group-hover:scale-105 dark:border-indigo-500/40 dark:bg-slate-900/80 shrink-0">
               <img
                 src="/logo.png"
-                alt="AgentFinOps Logo"
+                alt="AgentPay Logo"
                 className="h-7 w-7 sm:h-8 sm:w-8 object-contain"
               />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
-                  AgentFinOps
+                  AgentPay
                 </span>
                 <span className="hidden sm:inline-block rounded-md border border-indigo-500/30 bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-indigo-600 dark:text-indigo-300 whitespace-nowrap">
                   {t.nav.hubTitle}
@@ -84,7 +102,8 @@ export function HeaderNav() {
               {t.nav.storefront}
             </Link>
             <Link
-              href="/hub/smart-money-tracker-x402-api"
+              href="/hub/random"
+              prefetch={false}
               className="whitespace-nowrap transition-colors hover:text-indigo-600 dark:hover:text-white"
             >
               {t.nav.exampleRoute}
@@ -108,7 +127,7 @@ export function HeaderNav() {
             </span>
           </div>
 
-          {/* Social Links: GitHub only (X and Discord removed) */}
+          {/* Social Links: GitHub, X, Discord (hidden on narrow mobile, shown in mobile menu and >= md) */}
           <div className="hidden md:flex items-center gap-1.5">
             <a
               href={PUBLIC_GITHUB_URL}
@@ -120,19 +139,30 @@ export function HeaderNav() {
             >
               <GithubIcon className="h-4 w-4" />
             </a>
+            <a
+              href={PUBLIC_TWITTER_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:text-white"
+              title="X (Twitter)"
+              aria-label="Follow @OpenAgentPay on X"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </a>
+            <a
+              href={PUBLIC_DISCORD_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:text-[#5865F2] dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:text-[#5865F2]"
+              title="Discord"
+              aria-label="Join AgentPay Discord"
+            >
+              <DiscordIcon className="h-4 w-4" />
+            </a>
           </div>
 
           <ThemeSwitcher />
-
-          <a
-            href={`${PUBLIC_PLAYGROUND_URL}?utm_source=marketplace_header_btn`}
-            target="_blank"
-            rel="noreferrer"
-            className="hidden md:inline-flex items-center gap-1.5 rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-2 text-xs font-bold text-indigo-700 shadow-sm transition-all hover:from-indigo-100 hover:to-purple-100 dark:border-indigo-500/40 dark:from-indigo-500/15 dark:to-purple-500/15 dark:text-indigo-300 dark:hover:from-indigo-500/25 dark:hover:to-purple-500/25 whitespace-nowrap"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span>{t.nav.playgroundBtn}</span>
-          </a>
+          <LanguageSwitcher />
 
           <a
             href={PUBLIC_CONSOLE_URL}
@@ -185,7 +215,8 @@ export function HeaderNav() {
               {t.nav.storefront}
             </Link>
             <Link
-              href="/hub/smart-money-tracker-x402-api"
+              href="/hub/random"
+              prefetch={false}
               onClick={() => setMobileMenuOpen(false)}
               className={`rounded-xl px-3 py-2.5 transition-colors ${
                 pathname?.startsWith('/hub/')
@@ -230,6 +261,26 @@ export function HeaderNav() {
                   aria-label="GitHub Repository"
                 >
                   <GithubIcon className="h-4 w-4" />
+                </a>
+                <a
+                  href={PUBLIC_TWITTER_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:text-white"
+                  title="X (Twitter)"
+                  aria-label="Follow @OpenAgentPay on X"
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                </a>
+                <a
+                  href={PUBLIC_DISCORD_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:text-[#5865F2] dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:text-[#5865F2]"
+                  title="Discord"
+                  aria-label="Join AgentPay Discord"
+                >
+                  <DiscordIcon className="h-4 w-4" />
                 </a>
               </div>
 

@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import type { SupportedLocale, Translations } from './types';
 import { zh } from './locales/zh';
+import { en } from './locales/en';
 
 interface I18nContextValue {
   locale: SupportedLocale;
@@ -18,39 +19,48 @@ interface I18nContextValue {
 
 const translationsMap: Record<SupportedLocale, Translations> = {
   zh,
+  en,
 };
 
 const I18nContext = createContext<I18nContextValue>({
-  locale: 'zh',
+  locale: 'en',
   setLocale: () => {},
-  t: zh,
+  t: en,
 });
 
 export function I18nProvider({
   children,
-  initialLocale = 'zh',
+  initialLocale = 'en',
 }: {
   children: React.ReactNode;
   initialLocale?: SupportedLocale;
 }) {
   const [locale, setLocaleState] = useState<SupportedLocale>(initialLocale);
 
+  // Sync from localStorage on client mount if available
   useEffect(() => {
     try {
-      setLocaleState('zh');
-      document.documentElement.lang = 'zh-CN';
-      localStorage.setItem('NEXT_LOCALE', 'zh');
+      const stored = localStorage.getItem('NEXT_LOCALE') as SupportedLocale | null;
+      if (stored && (stored === 'zh' || stored === 'en')) {
+        setLocaleState(stored);
+        document.documentElement.lang = stored === 'zh' ? 'zh-CN' : 'en';
+        return;
+      }
+
+      // Default language is English
+      setLocaleState('en');
+      document.documentElement.lang = 'en';
     } catch {
       // Ignore in non-browser environments
     }
   }, []);
 
   const setLocale = useCallback((newLocale: SupportedLocale) => {
-    setLocaleState('zh');
+    setLocaleState(newLocale);
     try {
-      localStorage.setItem('NEXT_LOCALE', 'zh');
-      document.cookie = `NEXT_LOCALE=zh; path=/; max-age=31536000; SameSite=Lax`;
-      document.documentElement.lang = 'zh-CN';
+      localStorage.setItem('NEXT_LOCALE', newLocale);
+      document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
+      document.documentElement.lang = newLocale === 'zh' ? 'zh-CN' : 'en';
     } catch {
       // Ignore
     }
@@ -59,7 +69,7 @@ export function I18nProvider({
   const value = {
     locale,
     setLocale,
-    t: zh,
+    t: translationsMap[locale] || en,
   };
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

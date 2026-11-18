@@ -10,7 +10,7 @@ export async function GET(
   const route = await getMarketplaceRouteBySlug(slug);
 
   if (!route) {
-    return new Response(`# 404 Not Found\n\nRoute "${slug}" was not found in AgentFinOps Marketplace.\n`, {
+    return new Response(`# 404 Not Found\n\nRoute "${slug}" was not found in OpenAgentPay Marketplace.\n`, {
       status: 404,
       headers: { 'Content-Type': 'text/markdown; charset=utf-8' },
     });

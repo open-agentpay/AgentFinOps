@@ -1,150 +1,357 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  AlertTriangle,
   ArrowRight,
-  CheckCircle2,
   Cpu,
   Database,
-  Flame,
-  GitMerge,
-  KeyRound,
   Layers,
   Lock,
-  Power,
-  RefreshCw,
   Server,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
   Terminal,
-  Users,
   Zap,
 } from 'lucide-react';
 import {
   PUBLIC_DOCS_URL,
   PUBLIC_GATEWAY_URL,
-  PUBLIC_PLAYGROUND_URL,
 } from '@/lib/marketplace';
 import { useI18n } from '@/i18n/context';
 import { CopyButton } from '@/components/CopyButton';
 
-const RISK_ICONS = [
-  Flame,
-  ShieldAlert,
-  KeyRound,
-  RefreshCw,
-  GitMerge,
-  Users,
-  Power,
-];
-
-function getRiskTagBadgeStyle(tagType?: string) {
-  switch (tagType) {
-    case 'danger':
-      return 'border-rose-500/30 bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300';
-    case 'warning':
-      return 'border-amber-500/30 bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
-    case 'purple':
-      return 'border-purple-500/30 bg-purple-50 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300';
-    case 'emerald':
-      return 'border-emerald-500/30 bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
-    case 'blue':
-    default:
-      return 'border-indigo-500/30 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300';
-  }
-}
-
 export function HomePageView() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [buyerSdkLang, setBuyerSdkLang] = useState<'python' | 'typescript'>('python');
+  const [buyerRailMode, setBuyerRailMode] = useState<'wallet' | 'onchain'>(
+    locale === 'zh' ? 'wallet' : 'onchain'
+  );
+
+  useEffect(() => {
+    setBuyerRailMode(locale === 'zh' ? 'wallet' : 'onchain');
+  }, [locale]);
 
   const buyerPythonSnippet = useMemo(() => {
-    return `import os
-# 从顶层 agentpay_core 直接导入 AgentPayClient
-from agentpay_core import AgentPayClient, PolicyConfig, SQLitePolicyEngine
+    if (buyerRailMode === 'wallet') {
+      if (locale === 'en') {
+        return `import os
+from agentpay import AgentPayClient
+from agentpay.integrations.langchain import paid_tool
+from agentpay.policy import PolicyConfig, SQLitePolicyEngine
 
-# 1. 策略防火墙：仅配置预算和白名单域名
+# 1. Initialize Virtual Wallet mode (API Key auth + local budget firewall, no crypto wallet required)
 policy = SQLitePolicyEngine.create_in_memory(
     PolicyConfig(
-        id="weather_agent",
-        max_per_tx_base_units=250000,  # 0.25 Credits
-        rolling_budget_24h_base_units=5000000,  # 5.00 Credits
-        whitelist_domains={"gate.aipmedia.cn"},
+        id="enterprise_firewall",
+        name="Enterprise Budget Firewall",
+        base_currency="USD",
+        max_per_tx_base_units=50_000,           # Per-call cap ($0.05 USD)
+        rolling_budget_24h_base_units=5_000_000, # 24h rolling cap ($5.00 USD)
+        circuit_max_rpm=10,                     # Auto-trip circuit breaker on runaway loops
     )
 )
-
-# 2. 客户端直接传入 api_key，自动开启虚拟组织账户模式与 402 自动握手
 client = AgentPayClient(
-    api_key=os.getenv("AGENT_API_KEY", "apk_live_xxx"),
+    api_key=os.getenv("AGENTPAY_API_KEY", "apk_live_..."),
     policy=policy,
 )
 
-# 3. 正常发起调用
-response = client.get(
-    "https://gate.aipmedia.cn/api/v1/simple-weather",
-    params={"city": "北京"}
+# 2. Wrap any LangChain / MCP tool: automatic 402 wallet challenge & Hold/Capture accounting
+@paid_tool(name="market_research", client=client)
+def market_research(query: str) -> dict:
+    resp = client.post(f"${PUBLIC_GATEWAY_URL}/v1/ai/deepseek-research", json={"query": query})
+    return resp.json()
+
+result = market_research.invoke({"query": "Q3 Semiconductor Supply Chain"})
+print(result)`;
+      }
+      return `import os
+from agentpay import AgentPayClient
+from agentpay.integrations.langchain import paid_tool
+from agentpay.policy import PolicyConfig, SQLitePolicyEngine
+
+# 1. 初始化虚拟钱包模式（仅需 API Key + 本地预算防火墙，无需区块链私钥或加密代币）
+policy = SQLitePolicyEngine.create_in_memory(
+    PolicyConfig(
+        id="enterprise_firewall",
+        name="企业级 Agent 预算防火墙",
+        base_currency="CNY",
+        max_per_tx_base_units=500_000,           # 单次调用最高限额保护 (¥0.50 CNY)
+        rolling_budget_24h_base_units=20_000_000, # 24h 滚动预算上限保护 (¥20.00 CNY)
+        circuit_max_rpm=10,                      # 异常高频死循环自动触发熔断器
+    )
 )
-print("Response:", response.json())`;
-  }, []);
+client = AgentPayClient(
+    api_key=os.getenv("AGENTPAY_API_KEY", "apk_live_..."),
+    policy=policy,
+)
+
+# 2. 装饰任意 LangChain / Dify / MCP 工具：自动完成 402 虚拟钱包挑战与 Hold/Capture 实扣
+@paid_tool(name="enterprise_research", client=client)
+def enterprise_research(query: str) -> dict:
+    resp = client.post(f"${PUBLIC_GATEWAY_URL}/v1/ai/deepseek-research", json={"query": query})
+    return resp.json()
+
+result = enterprise_research.invoke({"query": "新能源汽车供应链深度研报"})
+print(result)`;
+    }
+
+    if (locale === 'en') {
+      return `import os
+from agentpay import AgentPayClient, LocalSigner
+from agentpay.integrations.langchain import paid_tool
+from agentpay.policy import PolicyConfig, SQLitePolicyEngine
+
+# 1. Initialize client & configure local financial firewall (private key never leaves local machine)
+signer = LocalSigner(os.getenv("AGENT_WALLET_KEY", "0x..."))
+policy = SQLitePolicyEngine.create_in_memory(
+    PolicyConfig(
+        id="agent_firewall",
+        name="Agent Firewall",
+        wallet_address=signer.address,
+        max_per_tx_base_units=50_000,          # Per-call maximum budget protection ($0.05 USDC)
+        rolling_budget_24h_base_units=1_000_000, # 24h rolling budget protection ($1.00 USDC)
+        circuit_max_rpm=5,                     # Abnormal frequency auto-trips circuit breaker
+    )
+)
+client = AgentPayClient(signer=signer, policy=policy)
+
+# 2. Decorate any LangChain tool or Python function: automatic 402 handshake & EIP-3009 zero-gas signing
+@paid_tool(name="fetch_crypto_intel", client=client)
+def fetch_crypto_intel(token: str) -> dict:
+    resp = client.get(f"${PUBLIC_GATEWAY_URL}/v1/solana/smart-money?token={token}")
+    return resp.json()
+
+result = fetch_crypto_intel.invoke({"token": "SOL"})
+print(result)`;
+    }
+    return `import os
+from agentpay import AgentPayClient, LocalSigner
+from agentpay.integrations.langchain import paid_tool
+from agentpay.policy import PolicyConfig, SQLitePolicyEngine
+
+# 1. 初始化链上非托管模式，配置本地财务防火墙（私钥永不离机）
+signer = LocalSigner(os.getenv("AGENT_WALLET_KEY", "0x..."))
+policy = SQLitePolicyEngine.create_in_memory(
+    PolicyConfig(
+        id="agent_firewall",
+        name="Agent Firewall",
+        wallet_address=signer.address,
+        max_per_tx_base_units=50_000,          # 单次调用最高预算保护 ($0.05 USDC)
+        rolling_budget_24h_base_units=1_000_000, # 24h 滚动预算保护 ($1.00 USDC)
+        circuit_max_rpm=5,                     # 异常频次自动触发熔断器
+    )
+)
+client = AgentPayClient(signer=signer, policy=policy)
+
+# 2. 装饰任何 LangChain 工具或 Python 函数，自动完成 402 握手与 EIP-3009 零 Gas 签名
+@paid_tool(name="fetch_crypto_intel", client=client)
+def fetch_crypto_intel(token: str) -> dict:
+    resp = client.get(f"${PUBLIC_GATEWAY_URL}/v1/solana/smart-money?token={token}")
+    return resp.json()
+
+result = fetch_crypto_intel.invoke({"token": "SOL"})
+print(result)`;
+  }, [locale, buyerRailMode]);
 
   const buyerTsSnippet = useMemo(() => {
-    return `import { AgentPayClient, PolicyConfig, SQLitePolicyEngine } from 'agentpay-core-sdk';
+    if (buyerRailMode === 'wallet') {
+      if (locale === 'en') {
+        return `import { AgentPayClient } from 'open-agentpay';
+import { createPaidTool } from 'open-agentpay/langchain';
+import { PolicyConfig, SQLitePolicyEngine, WhitelistMode } from 'open-agentpay/policy';
 
-// 1. 策略防火墙配置
+// 1. Initialize Virtual Wallet mode (API Key auth + local budget firewall)
 const policy = SQLitePolicyEngine.createInMemory(
   new PolicyConfig({
-    id: 'weather_agent',
-    maxPerTxBaseUnits: 250000n,
-    rollingBudget24hBaseUnits: 5000000n,
-    whitelistDomains: ['gate.aipmedia.cn'],
+    id: 'enterprise_firewall',
+    name: 'Enterprise Budget Firewall',
+    whitelistMode: WhitelistMode.SIMPLE,
+    maxPerTxBaseUnits: 50_000n,           // Per-call cap ($0.05 USD)
+    rollingBudget24hBaseUnits: 5_000_000n, // 24h rolling cap ($5.00 USD)
+    circuitMaxRpm: 10,                    // Auto-trip circuit breaker on runaway loops
   })
 );
-
-// 2. 客户端直接传入 apiKey
 const client = new AgentPayClient({
-  apiKey: process.env.AGENT_API_KEY ?? 'apk_live_xxx',
+  apiKey: process.env.AGENTPAY_API_KEY ?? 'apk_live_...',
   policy,
 });
 
-// 3. 正常发起调用
-const response = await client.get('https://gate.aipmedia.cn/api/v1/simple-weather', {
-  params: { timeframe: '24h' },
+// 2. Wrap any LangChain.js / MCP tool: automatic 402 wallet challenge & Hold/Capture
+const marketResearch = createPaidTool({
+  name: 'market_research',
+  description: 'Run deep industry research via AgentPay gateway',
+  client,
+  func: async ({ query }: { query: string }, ctx) => {
+    const resp = await ctx!.client!.post('${PUBLIC_GATEWAY_URL}/v1/ai/deepseek-research', {
+      json: { query },
+    });
+    return await resp.json();
+  },
 });
-console.log('Response:', await response.json());`;
-  }, []);
+
+const result = await marketResearch.invoke({ query: 'Q3 Semiconductor Supply Chain' });
+console.log(result);`;
+      }
+      return `import { AgentPayClient } from 'open-agentpay';
+import { createPaidTool } from 'open-agentpay/langchain';
+import { PolicyConfig, SQLitePolicyEngine, WhitelistMode } from 'open-agentpay/policy';
+
+// 1. 初始化虚拟钱包模式（仅需受控 API Key + 本地预算防火墙，无需区块链私钥）
+const policy = SQLitePolicyEngine.createInMemory(
+  new PolicyConfig({
+    id: 'enterprise_firewall',
+    name: '企业级 Agent 预算防火墙',
+    whitelistMode: WhitelistMode.SIMPLE,
+    maxPerTxBaseUnits: 500_000n,           // 单次调用最高预算保护 (¥0.50 CNY)
+    rollingBudget24hBaseUnits: 20_000_000n, // 24h 滚动预算保护 (¥20.00 CNY)
+    circuitMaxRpm: 10,                     // 异常高频死循环自动触发熔断器
+  })
+);
+const client = new AgentPayClient({
+  apiKey: process.env.AGENTPAY_API_KEY ?? 'apk_live_...',
+  policy,
+});
+
+// 2. 封装任意 LangChain.js / Vercel AI / MCP 工具：自动完成 402 虚拟钱包挑战与原子扣费
+const enterpriseResearch = createPaidTool({
+  name: 'enterprise_research',
+  description: '调用深度行业研报与商业数据查询',
+  client,
+  func: async ({ query }: { query: string }, ctx) => {
+    const resp = await ctx!.client!.post('${PUBLIC_GATEWAY_URL}/v1/ai/deepseek-research', {
+      json: { query },
+    });
+    return await resp.json();
+  },
+});
+
+const result = await enterpriseResearch.invoke({ query: '新能源汽车供应链深度研报' });
+console.log(result);`;
+    }
+
+    if (locale === 'en') {
+      return `import { AgentPayClient, LocalSigner } from 'open-agentpay';
+import { createPaidTool } from 'open-agentpay/langchain';
+import { PolicyConfig, SQLitePolicyEngine, WhitelistMode } from 'open-agentpay/policy';
+
+// 1. Initialize client & configure local financial firewall (private key never leaves local machine)
+const signer = new LocalSigner(process.env.AGENT_WALLET_KEY ?? '0x...');
+const policy = SQLitePolicyEngine.createInMemory(
+  new PolicyConfig({
+    id: 'agent_firewall',
+    name: 'Agent Firewall',
+    walletAddress: signer.address,
+    whitelistMode: WhitelistMode.SIMPLE,
+    maxPerTxBaseUnits: 50_000n,          // Per-call maximum budget protection ($0.05 USDC)
+    rollingBudget24hBaseUnits: 1_000_000n, // 24h rolling budget protection ($1.00 USDC)
+    circuitMaxRpm: 5,                    // Abnormal frequency auto-trips circuit breaker
+  })
+);
+const client = new AgentPayClient({ signer, policy });
+
+// 2. Wrap any LangChain.js / Vercel AI / MCP tool: automatic 402 handshake & EIP-3009 zero-gas signing
+const fetchCryptoIntel = createPaidTool({
+  name: 'fetch_crypto_intel',
+  description: 'Fetch real-time Solana smart-money flow',
+  client,
+  func: async ({ token }: { token: string }, ctx) => {
+    const resp = await ctx!.client!.get('${PUBLIC_GATEWAY_URL}/v1/solana/smart-money', {
+      params: { token },
+    });
+    return await resp.json();
+  },
+});
+
+const result = await fetchCryptoIntel.invoke({ token: 'SOL' });
+console.log(result);`;
+    }
+    return `import { AgentPayClient, LocalSigner } from 'open-agentpay';
+import { createPaidTool } from 'open-agentpay/langchain';
+import { PolicyConfig, SQLitePolicyEngine, WhitelistMode } from 'open-agentpay/policy';
+
+// 1. 初始化链上非托管模式，配置本地财务防火墙（私钥永不离机）
+const signer = new LocalSigner(process.env.AGENT_WALLET_KEY ?? '0x...');
+const policy = SQLitePolicyEngine.createInMemory(
+  new PolicyConfig({
+    id: 'agent_firewall',
+    name: 'Agent Firewall',
+    walletAddress: signer.address,
+    whitelistMode: WhitelistMode.SIMPLE,
+    maxPerTxBaseUnits: 50_000n,          // 单次调用最高预算保护 ($0.05 USDC)
+    rollingBudget24hBaseUnits: 1_000_000n, // 24h 滚动预算保护 ($1.00 USDC)
+    circuitMaxRpm: 5,                    // 异常频次自动触发熔断器
+  })
+);
+const client = new AgentPayClient({ signer, policy });
+
+// 2. 封装任何 LangChain.js / Vercel AI / MCP 工具，自动完成 402 握手与 EIP-3009 零 Gas 签名
+const fetchCryptoIntel = createPaidTool({
+  name: 'fetch_crypto_intel',
+  description: '获取实时 Solana 聪明钱动向',
+  client,
+  func: async ({ token }: { token: string }, ctx) => {
+    const resp = await ctx!.client!.get('${PUBLIC_GATEWAY_URL}/v1/solana/smart-money', {
+      params: { token },
+    });
+    return await resp.json();
+  },
+});
+
+const result = await fetchCryptoIntel.invoke({ token: 'SOL' });
+console.log(result);`;
+  }, [locale, buyerRailMode]);
 
   const buyerCodeSnippet = buyerSdkLang === 'python' ? buyerPythonSnippet : buyerTsSnippet;
   const buyerInstallCmd =
-    buyerSdkLang === 'python' ? 'pip install agentpay-core-sdk' : 'npm install agentpay-core-sdk';
+    buyerSdkLang === 'python' ? 'pip install open-agentpay' : 'npm install open-agentpay';
 
   const sellerYamlSnippet = useMemo(() => {
-    return `version: "1.0"
+    if (locale === 'zh') {
+      return `version: "1.0"
 server:
   host: "0.0.0.0"
   port: 8000
 
 routes:
-  # 企业级 AI Agent 自动化配额核销与计费路由
+  # 同时支持通道 A（CNY 虚拟钱包）与通道 B（链上 USDC 零 Gas）
   - path: "/v1/ai/deepseek-research"
     upstream: "https://internal-api.service/v1/research"
     methods: ["POST"]
-    allowed_payment_methods: "wallet"
+    allowed_payment_methods: "both"   # wallet | onchain | both
     asset: "CNY"
-    price_base_units: 350000          # 企业组织账户定价：¥0.35 CNY / 次 (6位微单位)
-    cluster: "domestic-v1"`;
-  }, []);
+    price_base_units: 350000          # 虚拟钱包定价：¥0.35 CNY / 次 (6位微单位)
+    onchain_asset: "USDC"
+    onchain_price_base_units: 50000   # 链上结算定价：$0.05 USDC / 次
+    pay_to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+    network: "eip155:8453"`;
+    }
+    return `version: "1.0"
+server:
+  host: "0.0.0.0"
+  port: 8000
+facilitator:
+  url: "https://facilitator.openagentpay.dev"
+
+routes:
+  - path: "/v1/solana/smart-money"
+    upstream: "https://internal-api.service/data"
+    methods: ["GET", "POST"]
+    price: "0.001 USDC"
+    pay_to: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+    network: "eip155:8453" # Base / Arbitrum USDC
+    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"`;
+  }, [locale]);
 
   const terminalSimulationOutput = `================================================================================
-    AgentFinOps Financial Firewall & Runaway Circuit Breaker Demo
+    AgentPay Financial Firewall & Runaway Circuit Breaker Demo
 ================================================================================
-Payment Rail: Virtual Wallet (CNY/USD) & 企业算力点数 (Credits)
+Dual-Rail Mode: Virtual Wallet (CNY/USD) & Arbitrum Sepolia USDC
 Firewall Limits: Max $0.10/tx | Daily Budget $1.00 | Max 5 RPM
 
 >>> [PHASE 1] Authorized Micro-Payment (Hold -> 200 OK -> Capture) <<<
-Agent requests market data for '600519' ($0.05).
+Agent requests market data for 'NVDA' ($0.05).
 [Gateway] PAYMENT_CONFIRMED: Status: COMPLETED (Sub-millisecond verification)
 
 >>> [PHASE 2] Single-Transaction Cap Exceeded: Local Defense <<<
@@ -193,20 +400,9 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
 
           {/* Action CTAs */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <a
-              href={`${PUBLIC_PLAYGROUND_URL}?utm_source=marketplace_hero`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 transition-all hover:from-indigo-500 hover:to-purple-500 hover:scale-[1.02]"
-            >
-              <Sparkles className="h-4 w-4 text-yellow-300 animate-pulse" />
-              <span>{t.homePage.btnPlayground}</span>
-              <ArrowRight className="h-4 w-4" />
-            </a>
-
             <Link
               href="/marketplace"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-400 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:text-white"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all hover:bg-indigo-500 hover:shadow-indigo-600/40"
             >
               <span>{t.homePage.btnGoMarketplace}</span>
               <ArrowRight className="h-4 w-4" />
@@ -227,16 +423,16 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
               <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
                 Python
               </span>
-              <span>pip install agentpay-core-sdk</span>
-              <CopyButton text="pip install agentpay-core-sdk" />
+              <span>pip install open-agentpay</span>
+              <CopyButton text="pip install open-agentpay" />
             </div>
 
             <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 font-mono text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-300">
               <span className="rounded bg-cyan-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-700 dark:text-cyan-400">
                 TypeScript
               </span>
-              <span>npm install agentpay-core-sdk</span>
-              <CopyButton text="npm install agentpay-core-sdk" />
+              <span>npm install open-agentpay</span>
+              <CopyButton text="npm install open-agentpay" />
             </div>
           </div>
         </div>
@@ -247,39 +443,47 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800/80 dark:bg-slate-900/60">
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <Zap className="h-4 w-4 text-emerald-500" />
-            <span>支持 x402 协议 (CNY / Credits)</span>
+            <span>
+              {locale === 'zh' ? '双轨微支付 (CNY / USDC)' : 'Circle USDC (EIP-3009)'}
+            </span>
           </div>
           <div className="mt-2 font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
-            ¥0.01
+            {locale === 'zh' ? '¥0.000001' : '0 Gas'}
           </div>
           <div className="mt-1 text-xs text-slate-500">
-            支持人民币 (CNY) 精确到分结算与防跑飞风控
+            {locale === 'zh'
+              ? '支持 6 位微单位 CNY/USD 虚拟账本与零 Gas 链上结算'
+              : 'Sponsored on-chain gas, buyer holds USDC only'}
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800/80 dark:bg-slate-900/60">
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <Lock className="h-4 w-4 text-indigo-500" />
-            <span>零信任安全边界</span>
+            <span>{locale === 'zh' ? '零信任安全边界' : 'Non-Custodial'}</span>
           </div>
           <div className="mt-2 font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
-            100% 本地拦截
+            {locale === 'zh' ? '100% 本地拦截' : '100% Local'}
           </div>
           <div className="mt-1 text-xs text-slate-500">
-            受限 API Key 租户隔离与本地凭据不出域保护
+            {locale === 'zh'
+              ? '受限 API Key 租户隔离与本地私钥不出域双重保护'
+              : 'Keys never leave buyer local environment'}
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800/80 dark:bg-slate-900/60">
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <Cpu className="h-4 w-4 text-cyan-500" />
-            <span>Go 网关核验与冻结</span>
+            <span>{locale === 'zh' ? 'Go 网关核签与冻结' : 'Go Gateway Verification'}</span>
           </div>
           <div className="mt-2 font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
             &lt; 5 ms
           </div>
           <div className="mt-1 text-xs text-slate-500">
-            毫秒级虚拟钱包 Hold 冻结与挑战核验
+            {locale === 'zh'
+              ? '毫秒级虚拟钱包 Hold 冻结与链下签名核验'
+              : 'Sub-millisecond off-chain verification'}
           </div>
         </div>
 
@@ -289,15 +493,17 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
             <span>Circuit Breaker</span>
           </div>
           <div className="mt-2 font-mono text-2xl font-extrabold text-slate-900 dark:text-white">
-            0 逃逸
+            {locale === 'zh' ? '0 逃逸' : '0 Runaways'}
           </div>
           <div className="mt-1 text-xs text-slate-500">
-            检测到高频死循环自动切断资金
+            {locale === 'zh'
+              ? '检测到高频死循环自动切断资金'
+              : 'Immediate freeze on runaway recursive loops'}
           </div>
         </div>
       </section>
 
-      {/* 3. What is AgentFinOps & Who is it for */}
+      {/* 3. What is AgentPay & Who is it for (Overview.md integration) */}
       <section className="space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800/90 dark:bg-slate-900/60 sm:p-10">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-50 px-3.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
@@ -313,17 +519,19 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
           </div>
         </div>
 
-        {/* 3 User Personas */}
+        {/* 3 User Personas from overview.md */}
         <div className="grid grid-cols-1 gap-5 pt-4 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-800 dark:bg-slate-950/70">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400">
               <Cpu className="h-5 w-5" />
             </div>
             <h4 className="mt-3 font-bold text-slate-900 dark:text-white">
-              智能体开发者 (Buyer)
+              {locale === 'zh' ? '智能体开发者 (Buyer)' : 'Agent Developer (Buyer)'}
             </h4>
             <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-              即插即用的 Python 与 TypeScript SDK，支持虚拟钱包 API Key 与 x402 协议模式，自动完成 402 握手与预算熔断保护。
+              {locale === 'zh'
+                ? '即插即用的 Python 与 TypeScript SDK，支持虚拟钱包 API Key 与链上签名双模式，自动完成 402 握手与预算熔断保护。'
+                : 'Drop-in Python & TypeScript clients that handle HTTP 402, enforce spending limits, and never let models touch private keys.'}
             </p>
           </div>
 
@@ -332,10 +540,12 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
               <Server className="h-5 w-5" />
             </div>
             <h4 className="mt-3 font-bold text-slate-900 dark:text-white">
-              API / 算力提供商 (Seller)
+              {locale === 'zh' ? 'API / 算力提供商 (Seller)' : 'API / Tool Provider (Seller)'}
             </h4>
             <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-              反向代理网关（Go 核心），只需一份配置即可将已有 HTTP 接口转变为支持 CNY/USD 钱包或 x402 协议结算的按次付费 API。
+              {locale === 'zh'
+                ? '反向代理网关（Go 核心），只需一份配置即可将已有 HTTP 接口转变为支持 CNY/USD 钱包或链上结算的按次付费 API。'
+                : 'High-performance Go reverse proxy that turns any existing HTTP API into a paid route with a YAML file.'}
             </p>
           </div>
 
@@ -344,10 +554,12 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
               <Database className="h-5 w-5" />
             </div>
             <h4 className="mt-3 font-bold text-slate-900 dark:text-white">
-              企业与平台运营者 (Enterprise)
+              {locale === 'zh' ? '企业与平台运营者 (Enterprise)' : 'Enterprise & Platforms'}
             </h4>
             <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-              严格的多租户隔离、RBAC 角色权限、项目预算硬顶、CNY/USD 只追加虚拟账本以及秒级紧急熔断开关。
+              {locale === 'zh'
+                ? '严格的多租户隔离、RBAC 角色权限、项目预算硬顶、CNY/USD 只追加虚拟账本以及秒级紧急熔断开关。'
+                : 'Multi-tenant isolation, RBAC, per-agent API keys, virtual wallet, audit timeline, and one-click kill switch.'}
             </p>
           </div>
         </div>
@@ -368,134 +580,29 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {t.homePage.risksList.map((item, idx) => {
-            const IconComponent = RISK_ICONS[idx] || ShieldAlert;
-            const isFirst = item.id === '01';
-            const isLast = item.id === '07';
-
-            return (
-              <div
-                key={item.id}
-                className={`group relative flex flex-col justify-between rounded-3xl border p-6 sm:p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
-                  isFirst
-                    ? 'lg:col-span-2 md:col-span-2 border-rose-300/80 bg-gradient-to-br from-rose-50/70 via-white to-indigo-50/40 shadow-sm dark:border-rose-500/30 dark:bg-gradient-to-br dark:from-rose-950/20 dark:via-slate-900/90 dark:to-indigo-950/20'
-                    : isLast
-                    ? 'lg:col-span-2 md:col-span-2 border-amber-300/80 bg-gradient-to-br from-amber-50/70 via-white to-rose-50/40 shadow-sm dark:border-amber-500/30 dark:bg-gradient-to-br dark:from-amber-950/20 dark:via-slate-900/90 dark:to-rose-950/20'
-                    : 'border-slate-200/90 bg-white/95 shadow-sm hover:border-indigo-400/80 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-indigo-500/50'
-                }`}
-              >
-                <div>
-                  {/* Top Bar: Index + Tag + Status / Functional Icon */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="font-mono text-xs font-black tracking-wider text-slate-400 dark:text-slate-500">
-                        {item.id}
-                      </span>
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getRiskTagBadgeStyle(
-                          item.tagType
-                        )}`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            item.tagType === 'danger'
-                              ? 'bg-rose-500 animate-pulse'
-                              : item.tagType === 'warning'
-                              ? 'bg-amber-500'
-                              : item.tagType === 'purple'
-                              ? 'bg-purple-500'
-                              : item.tagType === 'emerald'
-                              ? 'bg-emerald-500'
-                              : 'bg-indigo-500'
-                          }`}
-                        />
-                        {item.tag}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isFirst && (
-                        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
-                          RPM CIRCUIT BREAKER
-                        </span>
-                      )}
-                      {isLast && (
-                        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                          <Power className="h-3 w-3 animate-pulse" />
-                          GLOBAL KILL SWITCH
-                        </span>
-                      )}
-                      <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
-                          isFirst
-                            ? 'border-rose-200 bg-rose-100/80 text-rose-600 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                            : isLast
-                            ? 'border-amber-200 bg-amber-100/80 text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                            : 'border-slate-200 bg-slate-100/80 text-slate-700 group-hover:border-indigo-200 group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:border-indigo-800 dark:group-hover:bg-indigo-950/60 dark:group-hover:text-indigo-300'
-                        }`}
-                      >
-                        <IconComponent className="h-4 w-4" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Title & EnTitle */}
-                  <div className="mt-4">
-                    <div className="flex flex-wrap items-baseline gap-2">
-                      <h3 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                        {item.title}
-                      </h3>
-                      <span className="font-mono text-xs text-slate-400 dark:text-slate-500">
-                        {item.enTitle}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Problem Callout */}
-                  <div className="mt-3.5 rounded-2xl border border-rose-200/80 bg-rose-50/60 p-3.5 text-xs text-slate-700 dark:border-rose-900/30 dark:bg-rose-950/20 dark:text-slate-300">
-                    <div className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
-                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                      <span>生产风险场景：</span>
-                    </div>
-                    <p className="mt-1.5 leading-relaxed font-medium">
-                      {item.problem}
-                    </p>
-                  </div>
-
-                  {/* Solution Box */}
-                  <div className="mt-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-3.5 text-xs text-slate-700 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-slate-300">
-                    <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-                      <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-                      <span>系统级免疫机制：</span>
-                    </div>
-                    <p className="mt-1.5 leading-relaxed font-medium">
-                      {item.solution}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Keywords Chips */}
-                <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800/80">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {item.keywords.map((kw, kIdx) => (
-                      <span
-                        key={kIdx}
-                        className="inline-flex items-center rounded-md border border-slate-200/80 bg-slate-100/90 px-2 py-0.5 font-mono text-[11px] font-semibold text-slate-700 shadow-2xs transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-800 dark:bg-slate-800/90 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
-                      >
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {t.homePage.risksList.map((item, idx) => (
+            <div
+              key={idx}
+              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-400 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-indigo-500/40"
+            >
+              <div>
+                <h4 className="font-bold text-slate-900 dark:text-white">{item.title}</h4>
+                <div className="mt-2 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+                  <span className="font-semibold">{locale === 'zh' ? '生产风险：' : 'Risk: '}</span>
+                  {item.problem}
                 </div>
               </div>
-            );
-          })}
+              <div className="mt-3 rounded-lg bg-emerald-50 p-2.5 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                <span className="font-semibold">{locale === 'zh' ? '防御机制：' : 'Defense: '}</span>
+                {item.solution}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* 5. Deterministic Payment Architecture */}
+      {/* 5. Dual-Rail Architecture (Path A & Path B) */}
       <section className="space-y-6">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-50 px-3.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
@@ -539,7 +646,7 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
             </div>
           </div>
 
-          {/* Rail B: x402 Protocol */}
+          {/* Rail B: Native On-Chain x402 */}
           <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
@@ -583,7 +690,7 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
           </div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs text-slate-400">make demo</span>
-            <CopyButton text="make demo" label="复制命令" />
+            <CopyButton text="make demo" label={locale === 'zh' ? '复制命令' : 'Copy'} />
           </div>
         </div>
 
@@ -612,6 +719,32 @@ Calls Attempted: 10 | Paid Calls: 5 | Blocked: 5 | Funds Saved: $2.54 (96.6%)`;
                 {t.homePage.buyerQuickstartTitle}
               </span>
               <div className="flex flex-wrap items-center gap-2">
+                {/* Rail Mode Switcher: Virtual Wallet vs On-Chain */}
+                <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs dark:border-slate-800 dark:bg-slate-950">
+                  <button
+                    type="button"
+                    onClick={() => setBuyerRailMode('wallet')}
+                    className={`rounded-md px-2.5 py-1 font-medium transition ${
+                      buyerRailMode === 'wallet'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    }`}
+                  >
+                    {locale === 'zh' ? '虚拟钱包 (CNY/API Key)' : 'Virtual Wallet'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBuyerRailMode('onchain')}
+                    className={`rounded-md px-2.5 py-1 font-medium transition ${
+                      buyerRailMode === 'onchain'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                    }`}
+                  >
+                    {locale === 'zh' ? '链上签名 (EIP-3009)' : 'On-Chain (EIP-3009)'}
+                  </button>
+                </div>
+
                 {/* Language Switcher: Python vs TypeScript */}
                 <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs dark:border-slate-800 dark:bg-slate-950">
                   <button

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import {
   PUBLIC_GATEWAY_URL,
   PUBLIC_SITE_URL,
-  formatCreditsPrice,
+  formatUsdcPrice,
   getMarketplaceRoutes,
 } from '@/lib/marketplace';
 import { MarketplaceExplorer } from '@/components/MarketplaceExplorer';
@@ -11,9 +11,9 @@ import { MarketplaceExplorer } from '@/components/MarketplaceExplorer';
 export const revalidate = 15;
 
 export const metadata: Metadata = {
-  title: 'API 功能商店 — X402 按次计费 API & SDK 验证场 | AgentFinOps',
+  title: 'API Marketplace — X402 Pay-Per-Request APIs & SDK Playground',
   description:
-    '汇聚支持 HTTP 402 (x402) 协议的 AI Agent 工具与服务，支持企业算力点数微支付、网关实时 SLA 探活与 AgentFinOps SDK 预算验证。',
+    'Public directory of HTTP 402 (x402 V2) APIs and skills for autonomous AI agents with Circle USDC micro-payments, live gateway SLA metrics, and AgentPay SDK verification.',
   alternates: {
     canonical: `${PUBLIC_SITE_URL}/marketplace`,
   },
@@ -26,9 +26,9 @@ export default async function MarketplacePage() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'AgentFinOps X402 API Marketplace',
+    name: 'OpenAgentPay X402 Pay-Per-Request API Marketplace',
     description:
-      '汇聚支持 HTTP 402 (x402) 协议的 AI Agent 工具与服务，支持点数微支付与网关实时 SLA 探活。',
+      'Public directory of HTTP 402 (x402 V2) APIs and skills for autonomous AI agents with Circle USDC micro-payments and live gateway SLA metrics.',
     url: `${PUBLIC_SITE_URL}/marketplace`,
     numberOfItems: routes.length,
     itemListElement: routes.map((route, index) => ({
@@ -47,8 +47,8 @@ export default async function MarketplacePage() {
         },
         offers: {
           '@type': 'Offer',
-          price: formatCreditsPrice(route.price_base_units),
-          priceCurrency: 'Credits',
+          price: formatUsdcPrice(route.onchain_price_base_units || route.price_base_units),
+          priceCurrency: 'USDC',
           availability:
             route.sla.health_status === 'healthy'
               ? 'https://schema.org/InStock'

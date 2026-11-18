@@ -470,7 +470,7 @@ export const routeApi = {
         {
           type: 'basic',
           label: 'HTTP Basic 认证',
-          description: '注入 公有云节点64 用户名与密码',
+          description: '注入 Base64 用户名与密码',
           fields: [
             { key: 'username', label: '用户名', kind: 'text', secret: true, required: true },
             { key: 'password', label: '密码', kind: 'password', secret: true, required: true }

@@ -27,11 +27,16 @@ export interface MarketplaceRouteItem {
   tags: string[];
   description_md: string;
   cluster?: string;
+  network?: string;
+  network_label?: string;
   path_pattern: string;
   methods: string[];
   price_base_units: number;
   asset: string;
-  allowed_payment_methods: 'wallet';
+  onchain_price_base_units?: number;
+  onchain_asset?: string;
+  payee_address?: string;
+  allowed_payment_methods?: 'wallet' | 'onchain' | 'both' | string;
   rate_limit_rpm: number;
   timeout_ms: number;
   status: 'active' | 'disabled';

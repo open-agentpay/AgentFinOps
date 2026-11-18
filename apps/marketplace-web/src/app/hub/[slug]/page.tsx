@@ -1,14 +1,15 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import {
   PUBLIC_GATEWAY_URL,
   PUBLIC_SITE_URL,
   buildAnswerFirstTldr,
-  formatCreditsPrice,
-  formatClusterLabel,
+  formatNetworkLabel,
+  formatUsdcPrice,
   getMarketplaceRouteBySlug,
   getMarketplaceRoutes,
+  getRandomMarketplaceRoute,
 } from '@/lib/marketplace';
 import { RouteDetailView } from '@/components/RouteDetailView';
 
@@ -26,12 +27,14 @@ export async function generateMetadata(context: {
     };
   }
 
-  const priceStr = formatCreditsPrice(route.price_base_units);
+  const priceStr = formatUsdcPrice(
+    route.onchain_price_base_units || route.price_base_units
+  );
   const tldr = buildAnswerFirstTldr(route);
   const canonicalUrl = `${PUBLIC_SITE_URL}/hub/${route.slug}`;
 
   return {
-    title: `${route.title} (${priceStr} Credits/req) — X402 API`,
+    title: `${route.title} (${priceStr} USDC/req) — X402 API`,
     description: tldr,
     keywords: [
       route.title,
@@ -39,7 +42,7 @@ export async function generateMetadata(context: {
       route.category,
       'x402 API',
       'HTTP 402 Payment Required',
-      'AgentFinOps',
+      'OpenAgentPay',
       ...route.tags,
     ],
     alternates: {
@@ -49,7 +52,7 @@ export async function generateMetadata(context: {
       },
     },
     openGraph: {
-      title: `${route.title} — ${priceStr} Credits/req on AgentFinOps`,
+      title: `${route.title} — ${priceStr} USDC/req on OpenAgentPay`,
       description: tldr,
       url: canonicalUrl,
       type: 'article',
@@ -63,6 +66,13 @@ export default async function RouteDetailPage(context: {
   const { slug } = await context.params;
   const route = await getMarketplaceRouteBySlug(slug);
 
+  if (!route && (slug === 'solana-smart-money-tracker-x402-api' || slug === 'random' || slug === 'example')) {
+    const randomRoute = await getRandomMarketplaceRoute();
+    if (randomRoute?.slug) {
+      redirect(`/hub/${randomRoute.slug}`);
+    }
+  }
+
   if (!route) {
     notFound();
   }
@@ -72,7 +82,10 @@ export default async function RouteDetailPage(context: {
     .filter((r) => r.slug !== route.slug)
     .slice(0, 3);
 
-  const priceStr = formatCreditsPrice(route.price_base_units);
+  const priceStr = formatUsdcPrice(
+    route.onchain_price_base_units || route.price_base_units
+  );
+  const netLabel = formatNetworkLabel(route.network, route.network_label);
   const tldr = buildAnswerFirstTldr(route);
   const fullEndpoint = `${PUBLIC_GATEWAY_URL}${route.path_pattern}`;
   const isHealthy = route.sla.health_status === 'healthy';
@@ -96,12 +109,12 @@ export default async function RouteDetailPage(context: {
     },
     brand: {
       '@type': 'Brand',
-      name: 'AgentFinOps X402 Network',
+      name: 'OpenAgentPay X402 Network',
     },
     offers: {
       '@type': 'Offer',
       price: priceStr,
-      priceCurrency: 'Credits',
+      priceCurrency: 'USDC',
       availability: isHealthy
         ? 'https://schema.org/InStock'
         : 'https://schema.org/LimitedAvailability',
@@ -109,8 +122,8 @@ export default async function RouteDetailPage(context: {
       priceSpecification: {
         '@type': 'UnitPriceSpecification',
         price: priceStr,
-        priceCurrency: 'Credits',
-        unitText: 'per HTTP request (x402)',
+        priceCurrency: 'USDC',
+        unitText: 'per HTTP request (x402 V2 EIP-3009)',
       },
     },
     additionalProperty: [
@@ -121,8 +134,8 @@ export default async function RouteDetailPage(context: {
       },
       {
         '@type': 'PropertyValue',
-        name: 'SettlementCluster',
-        value: route.cluster ? `${route.cluster} (${formatClusterLabel(route.cluster)})` : 'Default Cluster',
+        name: 'SettlementNetwork',
+        value: `${route.network} (${netLabel})`,
       },
       {
         '@type': 'PropertyValue',

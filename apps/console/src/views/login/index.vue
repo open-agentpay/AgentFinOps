@@ -312,7 +312,7 @@ async function handleQuickRoleLogin(role: UserRole) {
             </div>
             <div class="status-divider">|</div>
             <div class="status-networks">
-              <span>国内算力节点</span> • <span>公有云节点</span> • <span>专网节点 算力点数 (Credits)</span>
+              <span>{{ t('国内算力节点') }}</span> • <span>{{ t('公有云节点') }}</span> • <span>{{ t('专网节点 算力点数 (Credits)') }}</span>
             </div>
           </div>
         </section>
@@ -419,7 +419,7 @@ async function handleQuickRoleLogin(role: UserRole) {
                     />
                   </el-form-item>
 
-                  <el-form-item :label="$t('结算本位币 (公有云节点 Currency)')" prop="currency">
+                  <el-form-item :label="$t('结算本位币 (Base Currency)')" prop="currency">
                     <el-select
                       v-model="registerForm.currency"
                       size="large"
@@ -514,7 +514,7 @@ async function handleQuickRoleLogin(role: UserRole) {
 </template>
 
 <style scoped>
-/* 公有云节点 Wrapper Layout */
+/* Base Wrapper Layout */
 .login-wrapper {
   position: relative;
   min-height: 100vh;

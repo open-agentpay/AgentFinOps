@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-export const dynamic = 'force-dynamic';
-
 const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
   '.mjs': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -16,71 +14,73 @@ const MIME_TYPES: Record<string, string> = {
   '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2',
+  '.webp': 'image/webp',
   '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
   '.txt': 'text/plain; charset=utf-8',
+  '.xml': 'application/xml; charset=utf-8',
 };
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ slug?: string[] }> }
 ) {
   const { slug } = await context.params;
   const docsDir = path.join(process.cwd(), 'public', 'docs');
 
-  let relativePath = slug && slug.length > 0 ? slug.join('/') : '';
-  if (!relativePath || relativePath === '/') {
-    relativePath = 'index.html';
+  if (!fs.existsSync(docsDir)) {
+    return new NextResponse(
+      'Documentation build artifacts not found in public/docs. Please run "npm run docs:build".',
+      { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+    );
   }
 
-  // Sanitize path against directory traversal
-  const safeRelativePath = path.normalize(relativePath).replace(/^(\.\.(\/|\\|$))+/, '');
-  let targetFile = path.join(docsDir, safeRelativePath);
+  const parts = slug && slug.length > 0 ? slug : [];
+  const relativePath = parts.join('/');
+
+  let filePath = path.join(docsDir, relativePath);
 
   // Resolution order:
-  // 1. Direct file match
-  // 2. Append .html
-  // 3. Append /index.html if directory
-  if (!fs.existsSync(targetFile)) {
-    if (fs.existsSync(`${targetFile}.html`)) {
-      targetFile = `${targetFile}.html`;
-    } else if (fs.existsSync(path.join(targetFile, 'index.html'))) {
-      targetFile = path.join(targetFile, 'index.html');
-    } else {
-      const notFoundFile = path.join(docsDir, '404.html');
-      if (fs.existsSync(notFoundFile)) {
-        const notFoundContent = fs.readFileSync(notFoundFile);
-        return new NextResponse(notFoundContent, {
-          status: 404,
-          headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        });
-      }
-      return new NextResponse('Documentation page not found', { status: 404 });
-    }
-  } else if (fs.statSync(targetFile).isDirectory()) {
-    const indexInDir = path.join(targetFile, 'index.html');
-    if (fs.existsSync(indexInDir)) {
-      targetFile = indexInDir;
+  // 1. Directory -> append index.html
+  // 2. Exact file exists
+  // 3. filePath + .html exists (for VitePress cleanUrls)
+  // 4. filePath + /index.html exists
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+    filePath = path.join(filePath, 'index.html');
+  } else if (!fs.existsSync(filePath)) {
+    if (fs.existsSync(`${filePath}.html`)) {
+      filePath = `${filePath}.html`;
+    } else if (fs.existsSync(path.join(filePath, 'index.html'))) {
+      filePath = path.join(filePath, 'index.html');
     }
   }
 
-  try {
-    const ext = path.extname(targetFile).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-    const content = fs.readFileSync(targetFile);
-
-    return new NextResponse(content, {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control':
-          ext === '.html'
-            ? 'no-cache, must-revalidate'
-            : 'public, max-age=31536000, immutable',
-      },
-    });
-  } catch (err) {
-    return new NextResponse('Internal Server Error', { status: 500 });
+  // If still not found, try 404.html in docsDir
+  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    const notFoundHtml = path.join(docsDir, '404.html');
+    if (fs.existsSync(notFoundHtml)) {
+      const fallbackContent = fs.readFileSync(notFoundHtml);
+      return new NextResponse(fallbackContent, {
+        status: 404,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+    return new NextResponse('Documentation page not found', { status: 404 });
   }
+
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+  const fileBuffer = fs.readFileSync(filePath);
+
+  return new NextResponse(fileBuffer, {
+    status: 200,
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control':
+        ext === '.html'
+          ? 'public, max-age=60'
+          : 'public, max-age=31536000, immutable',
+    },
+  });
 }

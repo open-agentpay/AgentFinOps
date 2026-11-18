@@ -1,4 +1,4 @@
-export type SupportedLocale = 'zh';
+export type SupportedLocale = 'zh' | 'en';
 
 export interface Translations {
   nav: {
@@ -10,8 +10,6 @@ export interface Translations {
     docs: string;
     gatewayStatus: string;
     consoleBtn: string;
-    playground: string;
-    playgroundBtn: string;
     langSwitch: string;
   };
   homePage: {
@@ -20,7 +18,6 @@ export interface Translations {
     heroSubtitle: string;
     btnGoMarketplace: string;
     btnReadDocs: string;
-    btnPlayground: string;
     btnCopyPip: string;
     goldenRuleLabel: string;
     goldenRule: string;
@@ -32,16 +29,9 @@ export interface Translations {
     risksTitle: string;
     risksSubtitle: string;
     risksList: Array<{
-      id: string;
-      tag: string;
-      tagType?: 'danger' | 'warning' | 'purple' | 'blue' | 'emerald';
       title: string;
-      enTitle: string;
       problem: string;
-      problemHighlight?: string;
       solution: string;
-      keywords: string[];
-      isHero?: boolean;
     }>;
     dualRailBadge: string;
     dualRailTitle: string;
@@ -71,7 +61,6 @@ export interface Translations {
     storefront: string;
     registryApi: string;
     sellerConsole: string;
-    playground: string;
   };
   hero: {
     badgeEconomy: string;
@@ -119,6 +108,20 @@ export interface Translations {
     settlementNetwork: string;
     allNetworks: string;
     categories: Record<string, string>;
+    clusters?: Record<string, string>;
+  };
+  publishApi: string;
+  openAiSdkBadge: string;
+  heroForAgents: string;
+  heroClear: string;
+  card: {
+    llmBadge: string;
+    tokenStreaming: string;
+    promptShort: string;
+    completionShort: string;
+    fenPer1k: string;
+    viewOpenAiCode: string;
+    viewSdkCode: string;
   };
   preview: {
     sdkTitle: string;
@@ -180,7 +183,6 @@ export interface Translations {
     mcpClaudeCursorLabel: string;
     mcpSdkLabel: string;
     mcpProtectedBadge: string;
-    mcpCliCommandLabel: string;
     tableSpecsTitle: string;
     tableSpecsSubtitle: string;
     paramCol: string;
