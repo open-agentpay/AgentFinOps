@@ -32,12 +32,14 @@ import {
   buildTypescriptSdkSnippet,
   formatClusterLabel,
   formatCreditsPrice,
+  formatTagLabel,
   formatTokenPriceFen,
   getLlmModelName,
   isLlmRoute,
 } from '@/lib/marketplace';
 import type { MarketplaceParameter, MarketplaceRouteItem } from '@/types/marketplace';
 import { CopyButton } from '@/components/CopyButton';
+import { MarkdownContent } from '@/components/MarkdownContent';
 import { useI18n } from '@/i18n/context';
 
 function flattenObjectToParams(
@@ -809,11 +811,11 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
           {/* 4. Semantic Description & HTTP 402 Raw cURL Verification */}
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800/90 dark:bg-slate-900/60 space-y-6">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white mb-3">
                 {t.detail.docsTitle}
               </h2>
-              <div className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-                {route.description_md}
+              <div className="mt-3">
+                <MarkdownContent content={route.description_md} />
               </div>
             </div>
 
@@ -891,7 +893,7 @@ curl -H "Accept: text/markdown" "${PUBLIC_SITE_URL}/hub/${route.slug}"`;
                   key={tag}
                   className="rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1 font-mono text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
                 >
-                  #{tag}
+                  #{formatTagLabel(tag, locale)}
                 </span>
               ))}
             </div>

@@ -53,6 +53,81 @@ export function formatNetworkLabel(network?: string, fallback?: string): string 
 }
 
 /**
+ * Semantic and technical tags translation dictionary.
+ */
+export const TAG_DICTIONARY: Record<string, { en: string; zh: string }> = {
+  // Node / Settlement / Infrastructure tags
+  'x402': { en: 'x402', zh: 'x402' },
+  '算力点数 (Credits)': { en: 'Compute Credits', zh: '算力点数 (Credits)' },
+  '算力点数': { en: 'Compute Credits', zh: '算力点数' },
+  'Compute Credits': { en: 'Compute Credits', zh: '算力点数 (Credits)' },
+  '国内算力节点': { en: 'Domestic Compute Node', zh: '国内算力节点' },
+  'Domestic Compute Node': { en: 'Domestic Compute Node', zh: '国内算力节点' },
+  '公有云节点': { en: 'Public Cloud Node', zh: '公有云节点' },
+  'Public Cloud Node': { en: 'Public Cloud Node', zh: '公有云节点' },
+  '专网节点': { en: 'Dedicated Private Node', zh: '专网节点' },
+  'Dedicated Private Node': { en: 'Dedicated Private Node', zh: '专网节点' },
+  '专网节点 算力点数 (Credits)': { en: 'Dedicated Private Node Credits', zh: '专网节点 算力点数 (Credits)' },
+  '国内算力节点 / 公有云节点 算力点数 (Credits)': { en: 'Domestic / Public Cloud Credits', zh: '国内算力节点 / 公有云节点 算力点数 (Credits)' },
+
+  // Protocol & Model capabilities
+  'OpenAI兼容': { en: 'OpenAI Compatible', zh: 'OpenAI兼容' },
+  'OpenAI Compatible': { en: 'OpenAI Compatible', zh: 'OpenAI兼容' },
+  '流式计费': { en: 'Streaming Billing', zh: '流式计费' },
+  'Streaming Billing': { en: 'Streaming Billing', zh: '流式计费' },
+  '资金流追踪': { en: 'Fund Flow Tracking', zh: '资金流追踪' },
+  'Fund Flow Tracking': { en: 'Fund Flow Tracking', zh: '资金流追踪' },
+  '主力资金': { en: 'Smart Money', zh: '主力资金' },
+  'Smart Money': { en: 'Smart Money', zh: '主力资金' },
+  '量化投研': { en: 'Quant Research', zh: '量化投研' },
+  'Quant Research': { en: 'Quant Research', zh: '量化投研' },
+
+  // Category labels as tags
+  '沙箱算力与开发工具': { en: 'Compute & Dev Tools', zh: '沙箱算力与开发工具' },
+  '企业财务与合规审计': { en: 'Enterprise Compliance', zh: '企业财务与合规审计' },
+  '金融行情与研报': { en: 'Financial Intel', zh: '金融行情与研报' },
+  '网页抓取与实时搜索': { en: 'Web Scraping & Search', zh: '网页抓取与实时搜索' },
+  'AI 推理与多模态': { en: 'AI & LLM Inference', zh: 'AI 推理与多模态' },
+};
+
+/**
+ * Maps semantic and technical tags between Chinese and English based on current locale.
+ */
+export function formatTagLabel(tag: string, locale: string = 'en'): string {
+  if (!tag) return '';
+  const clean = tag.replace(/^#+/, '').trim();
+  const direct = TAG_DICTIONARY[clean];
+  if (direct) {
+    return locale === 'en' ? direct.en : direct.zh;
+  }
+
+  // Heuristic fallbacks for dynamic or composite tag strings
+  if (locale === 'en') {
+    if (clean.includes('算力点数')) return 'Compute Credits';
+    if (clean.includes('国内算力')) return 'Domestic Compute Node';
+    if (clean.includes('公有云')) return 'Public Cloud Node';
+    if (clean.includes('专网节点')) return 'Dedicated Private Node';
+    if (clean.includes('OpenAI兼容')) return 'OpenAI Compatible';
+    if (clean.includes('流式计费')) return 'Streaming Billing';
+    if (clean.includes('资金流')) return 'Fund Flow Tracking';
+    if (clean.includes('主力资金')) return 'Smart Money';
+    if (clean.includes('量化投研')) return 'Quant Research';
+  } else if (locale === 'zh') {
+    const lower = clean.toLowerCase();
+    if (lower === 'compute credits' || lower === 'credits') return '算力点数 (Credits)';
+    if (lower === 'domestic compute node') return '国内算力节点';
+    if (lower === 'public cloud node') return '公有云节点';
+    if (lower === 'dedicated private node') return '专网节点';
+    if (lower === 'openai compatible') return 'OpenAI兼容';
+    if (lower === 'streaming billing') return '流式计费';
+    if (lower === 'fund flow tracking') return '资金流追踪';
+    if (lower === 'quant research') return '量化投研';
+  }
+
+  return clean;
+}
+
+/**
  * Formats CNY/Credits price into a clean human-readable string with 2 decimal places (分, e.g. "0.05" or "10.00").
  */
 export function formatCreditsPrice(baseUnits: number): string {
@@ -814,7 +889,15 @@ function applyLocalFilter(
       return false;
     }
     if (filter.tag) {
-      const hasTag = item.tags.some((t) => t.toLowerCase() === filter.tag!.toLowerCase());
+      const filterTag = filter.tag.toLowerCase();
+      const hasTag = item.tags.some((t) => {
+        const lower = t.toLowerCase();
+        return (
+          lower === filterTag ||
+          formatTagLabel(t, 'en').toLowerCase() === filterTag ||
+          formatTagLabel(t, 'zh').toLowerCase() === filterTag
+        );
+      });
       if (!hasTag) return false;
     }
     if (filter.q && filter.q.trim() !== '') {
@@ -827,6 +910,8 @@ function applyLocalFilter(
         item.path_pattern,
         item.description_md,
         ...item.tags,
+        ...item.tags.map((t) => formatTagLabel(t, 'en')),
+        ...item.tags.map((t) => formatTagLabel(t, 'zh')),
       ]
         .join(' ')
         .toLowerCase();
